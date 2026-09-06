@@ -191,8 +191,12 @@ function drawProfile() {
   }
   const narrow = width < 440;
   const sidePadding = narrow ? 36 : 70;
-  const scale = Math.min((width - sidePadding * 2) / p.params.width, (height - 165) / p.params.thickness);
-  const cx = width / 2, cy = (height - 60) / 2 + (p.top + p.bottom) * scale / 2;
+  // Both tabs share a scale and crown position so the same circle looks the
+  // same on screen. Fit the wider/deeper section, regardless of active tab.
+  const maxWidth=Math.max(...currentSections.map(s=>s.profile.params.width));
+  const maxThickness=Math.max(...currentSections.map(s=>s.profile.params.thickness));
+  const scale = Math.min((width - sidePadding * 2) / maxWidth, (height - 165) / maxThickness);
+  const cx = width / 2, cy = (height - 60) / 2 - maxThickness * scale / 2;
   const transform = ([x, y]) => [cx + x * scale, cy - y * scale];
   ctx.fillStyle = '#fdfcf9'; ctx.fillRect(0, 0, width, height);
   if ($('grid').checked) {

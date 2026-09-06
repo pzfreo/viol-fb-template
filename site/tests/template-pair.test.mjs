@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { makeTemplatePair, exportTemplatePairSvg } from '../src/template-pair.js';
-import { PRESETS, construction } from '../src/profile.js';
+import { PRESETS, construction, surface } from '../src/profile.js';
 const dimensions={nutWidth:42,endWidth:64,boardLength:450,stringLength:700,thickness1:20,thickness7:22};
 const near=(a,b)=>assert.ok(Math.abs(a-b)<1e-8,`${a} != ${b}`);
 
@@ -12,7 +12,7 @@ test('pair uses calculated widths and independently supplied fret thicknesses',(
     near(s.profile.params.width,42+22*s.distance/450);
     near(s.profile.params.thickness,dimensions[`thickness${s.fret}`]);
     near(-s.profile.bottom,dimensions[`thickness${s.fret}`]);
-    near(s.profile.params.radius/s.width,PRESETS.meares1.radius/PRESETS.meares1.width);
+    near(s.profile.params.radius,PRESETS.meares1.radius);
     near((s.profile.edgeY-s.profile.corner.sideTopY)/s.profile.params.thickness,
       (shared.edgeY-shared.corner.sideTopY)/PRESETS.meares1.thickness);
     assert.equal(s.template.name,`Viol F${s.fret}`);
@@ -23,6 +23,15 @@ test('pair uses calculated widths and independently supplied fret thicknesses',(
   const changed=makeTemplatePair({...dimensions,thickness7:24},PRESETS.meares1,'Viol');
   assert.deepEqual(changed.sections[0],pair.sections[0]);
   assert.notDeepEqual(changed.sections[1].template.contact,pair.sections[1].template.contact);
+});
+
+test('both fret tops use identical circle coordinates with explicit or default radius',()=>{
+  for(const topRadius of [undefined,55,80]){
+    const pair=makeTemplatePair({...dimensions,topRadius},PRESETS.meares1,'Viol');
+    const [a,b]=pair.sections.map(s=>s.profile);
+    near(a.params.radius,b.params.radius);
+    for(let x=0;x<Math.min(a.joinX,b.joinX);x+=.1)near(surface(x,a.params).y,surface(x,b.params).y);
+  }
 });
 test('pair export has separate nonoverlapping plates at 1:1 scale',()=>{
   const pair=makeTemplatePair(dimensions,PRESETS.meares1,'Viol'),svg=exportTemplatePairSvg(pair);

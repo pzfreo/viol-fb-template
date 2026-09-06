@@ -12,7 +12,7 @@ import * as threeMf from '../src/three-mf.js';
 // Exercise real application event handlers with a small DOM adapter. Geometry,
 // file creation, validation and tab selection use the production modules.
 function app() {
-  const elements=new Map(),downloads=[],blobs=new Map();let nextUrl=0,pending;
+  const elements=new Map(),downloads=[],blobs=new Map(),canvasCalls=[];let nextUrl=0,pending;
   class Element {
     constructor(){this.value='';this.children=[];this.listeners={};this.attributes={};this.disabled=false;this.checked=false;this.parentElement={};this.classList={add(){},remove(){},toggle(){}};}
     set textContent(value){this.text=String(value);this.children=[];}
@@ -25,7 +25,7 @@ function app() {
     click(){if(this.download)downloads.push({name:this.download,blob:blobs.get(this.href)});else return this.emit('click');}
     focus(){} remove(){} showModal(){} close(){}
     getBoundingClientRect(){return {width:800,height:420};}
-    getContext(){return new Proxy({},{get:()=>()=>{},set:()=>true});}
+    getContext(){return new Proxy({},{get:(_,method)=>(...args)=>canvasCalls.push({method,args}),set:()=>true});}
   }
   const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
   for(const match of html.matchAll(/<\w+\b[^>]*\bid="([^"]+)"[^>]*>/g)){
@@ -37,7 +37,7 @@ function app() {
   runInNewContext(source,{...profile,...fingerboard,...templates,...overstand,...threeMf,REFERENCES,document,window:{devicePixelRatio:1},Blob,
     URL:{createObjectURL:blob=>{const url=`blob:${++nextUrl}`;blobs.set(url,blob);return url;},revokeObjectURL:url=>blobs.delete(url)},
     ResizeObserver:class{observe(){}},requestAnimationFrame:fn=>{pending=fn;return 1;},cancelAnimationFrame(){},setTimeout(){}});
-  return {get:id=>elements.get(id),downloads,render:()=>pending?.(),async input(id,value){const e=elements.get(id);e.value=String(value);await e.emit('input');}};
+  return {get:id=>elements.get(id),downloads,canvasCalls,render:()=>{canvasCalls.length=0;pending?.();},async input(id,value){const e=elements.get(id);e.value=String(value);await e.emit('input');}};
 }
 async function enterMeasurements(ui){
   for(const [key,value]of Object.entries({nutWidth:42,endWidth:62,boardLength:256,stringLength:390,thickness1:20,thickness7:22,'pair-radius':55,'pair-name':'Viol'}))await ui.input(key,value);
@@ -70,4 +70,20 @@ test('both template formats follow review and 3MF thickness validation leaves SV
   const bytes=await ui.downloads.at(-1).blob.arrayBuffer();assert.equal(new DataView(bytes).getUint32(0,true),0x04034b50);
   await ui.input('print-thickness','');assert.equal(ui.get('export-3mf').disabled,true);assert.equal(ui.get('export-pair').disabled,false);
   await ui.get('export-pair').click();assert.match(ui.downloads.at(-1).name,/-underside-templates\.svg$/);
+});
+
+
+test('F1 and F7 share screen scale and crown alignment',async()=>{
+  const ui=app();await enterMeasurements(ui);ui.render();
+  const crown1=ui.canvasCalls.find(c=>c.method==='fillText'&&c.args[0]==='PLAYING SURFACE').args.slice(1);
+  const moves1=ui.canvasCalls.filter(c=>c.method==='moveTo');
+  await ui.get('tab-f7').click();ui.render();
+  const crown7=ui.canvasCalls.find(c=>c.method==='fillText'&&c.args[0]==='PLAYING SURFACE').args.slice(1);
+  const moves7=ui.canvasCalls.filter(c=>c.method==='moveTo');
+  assert.deepEqual(crown1,crown7,'crown does not move between tabs');
+  // Grid spacing reflects millimetres per pixel and must remain identical.
+  assert.deepEqual(moves1.slice(0,10),moves7.slice(0,10));
+  await ui.input('pair-radius','');
+  const radius7=ui.get('metric-radius').textContent;
+  await ui.get('tab-f1').click();assert.equal(ui.get('metric-radius').textContent,radius7);
 });

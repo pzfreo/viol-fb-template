@@ -10,7 +10,7 @@ export function makeSectionProfiles(dimensions, shared) {
       if(!section.onBoard)throw new RangeError('This fret is beyond the fingerboard end.');
       const thickness=dimensions[`thickness${section.fret}`];
       if(!Number.isFinite(thickness)||thickness<=0)throw new RangeError('Enter a positive maximum thickness.');
-      const params={width:section.width,radius:dimensions.topRadius??shared.radius*section.width/shared.width,thickness};
+      const params={width:section.width,radius:dimensions.topRadius??shared.radius,thickness};
       params.blend=radiusForCornerDrop(dropRatio*thickness,params);
       const profile=generate(params);
       return {...section,profile};
