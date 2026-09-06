@@ -1,0 +1,148 @@
+/** Fixed playing arc and flat sides; underside carved up; top corners eased last.
+ * All lengths are millimetres. Crown is (0, 0); underside centre is (0, -T).
+ */
+export const DEFAULTS = Object.freeze({ width: 60, radius: 70, thickness: 26, blend: .5 });
+export const PRESETS = Object.freeze({
+  meares1: { width: 60, radius: 70.25, thickness: 26.87, blend: 4 },
+  meares2: { width: 60, radius: 69.38, thickness: 25.55, blend: .5 },
+});
+const add = (a,b) => a.map((v,i)=>v+b[i]);
+const mul = (p,k) => p.map(v=>v*k);
+const cross = (a,b) => a[0]*b[1]-a[1]*b[0];
+
+// Invert the tangent corner construction: drop is measured vertically down
+// from the original playing-arc/side intersection to the fillet's side end.
+export function radiusForCornerDrop(drop, params) {
+  const a=params.width/2, r=params.radius, root=Math.sqrt(r*r-a*a);
+  if(!Number.isFinite(drop)||drop<0||drop>root||r<=a)return NaN;
+  return drop*(2*root-drop)/(2*(r-a));
+}
+
+export function surface(x, params, underside = false) {
+  const a = params.width / 2;
+  if (!underside) {
+    const root = Math.sqrt(params.radius ** 2 - x ** 2);
+    return { y: root - params.radius, first: -x/root, second: -(params.radius**2)/root**3 };
+  }
+  // These coefficients depend on W, R and T only. Blend NEVER enters this curve.
+  const h = .85 * params.thickness + Math.sqrt(params.radius**2-a*a) - params.radius;
+  const u = x/a;
+  return { y: -params.thickness + h*(.85*u*u+.15*u**4),
+    first: h*(1.7*u+.6*u**3)/a, second: h*(1.7+1.8*u*u)/(a*a) };
+}
+
+export function bezier(control, t, derivative = 0) {
+  let p = control.map(v=>[...v]);
+  for (let k=0;k<derivative;k++) p=p.slice(1).map((v,i)=>mul(add(v,mul(p[i],-1)),p.length-1));
+  while(p.length>1) p=p.slice(1).map((v,i)=>add(mul(p[i],1-t),mul(v,t)));
+  return p[0];
+}
+export function curveRadius(control,t) {
+  const d1=bezier(control,t,1), d2=bezier(control,t,2);
+  return Math.hypot(...d1)**3/Math.abs(cross(d1,d2));
+}
+function hermite(p0,p5,d0,d5,dd0,dd5) {
+  const p1=add(p0,mul(d0,1/5)), p2=add(add(mul(p1,2),mul(p0,-1)),mul(dd0,1/20));
+  const p4=add(p5,mul(d5,-1/5)), p3=add(add(mul(p4,2),mul(p5,-1)),mul(dd5,1/20));
+  return [p0,p1,p2,p3,p4,p5];
+}
+export function construction(params) {
+  const {width,radius,thickness,blend}=params;
+  const a=width/2;
+  const edgeY=surface(a,params).y;
+  // A short remnant of the original flat side. This chosen 10% proportion is
+  // independent of corner easing, and is documented as a construction preset.
+  const sideY=edgeY-.1*thickness;
+  const span=.12*width, underJoinX=a-span;
+  const bottom=surface(underJoinX,params,true);
+  const length=1.2*span, vertical=.7*(sideY-bottom.y);
+  // Carve from the underside up to the vertical side. Zero curvature at the
+  // side end gives a smooth meeting with the straight wall.
+  const carveBlend=hermite([a,sideY],[underJoinX,bottom.y],[0,-vertical],
+    [-length,-length*bottom.first],[0,0],[0,bottom.second*length*length]);
+  let corner={radius:0,center:[a,edgeY],angle:0,joinX:a,sideTopY:edgeY};
+  if(blend>0){
+    const cx=a-blend;
+    const cy=-radius+Math.sqrt((radius-blend)**2-cx*cx);
+    const angle=Math.atan2(cy+radius,cx);
+    corner={radius:blend,center:[cx,cy],angle,
+      joinX:radius*cx/(radius-blend),sideTopY:cy};
+  }
+  return {edgeY,sideY,underJoinX,carveBlend,vertical,corner,
+    flatSideHeight:corner.sideTopY-sideY};
+}
+export function cornerPoint(corner,t) {
+  const angle=corner.angle*(1-t);
+  return [corner.center[0]+corner.radius*Math.cos(angle),
+    corner.center[1]+corner.radius*Math.sin(angle)];
+}
+const binomial = (n,k) => {
+  let c=1; for(let i=1;i<=k;i++)c=c*(n-i+1)/i; return c;
+};
+function nonpositive(coefficients,depth=0) {
+  if(Math.max(...coefficients)<=1e-12)return true;
+  if(Math.min(...coefficients)>1e-12 || depth>=14)return false;
+  // The polynomial lies in the convex hull of its Bernstein coefficients.
+  let row=[...coefficients]; const left=[row[0]],right=[row.at(-1)];
+  while(row.length>1){row=row.slice(1).map((v,i)=>(v+row[i])/2);left.push(row[0]);right.push(row.at(-1));}
+  return nonpositive(left,depth+1)&&nonpositive(right.reverse(),depth+1);
+}
+function convexBlend(control) {
+  const d1=control.slice(1).map((p,i)=>mul(add(p,mul(control[i],-1)),5));
+  const d2=d1.slice(1).map((p,i)=>mul(add(p,mul(d1[i],-1)),4));
+  const n=Array(8).fill(0);
+  for(let i=0;i<5;i++)for(let j=0;j<4;j++)
+    n[i+j]+=binomial(4,i)*binomial(3,j)/binomial(7,i+j)*cross(d1[i],d2[j]);
+  return nonpositive(n);
+}
+
+export function validate(params) {
+  for(const key of ['width','radius','thickness','blend'])
+    if(!Number.isFinite(params[key])||params[key]>(key==='blend'?100:1000)||
+      (key==='blend'?params[key]<0:params[key]<=0))
+      return {valid:false,message:'Enter positive width, radius and thickness. Corner drop must be nonnegative; zero leaves a sharp edge.'};
+  if(params.radius<=params.width/2)
+    return {valid:false,message:'The playing-surface radius must be greater than half the fingerboard width.'};
+  if(params.blend>=params.width/2)
+    return {valid:false,message:'Reduce corner drop to fit the top edge.'};
+  const under=surface(0,params,true);
+  if(under.second<=1/params.radius)
+    return {valid:false,message:'Increase thickness or crown radius to give the underside a stronger curve than the playing surface.'};
+  const geometry=construction(params);
+  if(geometry.vertical<=0 || !convexBlend(geometry.carveBlend))
+    return {valid:false,message:'These dimensions do not leave room to carve a smooth underside up to the flat sides.'};
+  if(geometry.flatSideHeight<=1e-8)
+    return {valid:false,message:'This drop removes the whole flat side. Use a smaller corner drop.'};
+  return {valid:true,message:params.blend===0?'Carved underside · sharp top corners':'Carved underside · lightly rounded top corners',geometry};
+}
+
+export function generate(params,samples=1200) {
+  const result=validate(params);
+  if(!result.valid)throw new RangeError(result.message);
+  if(!Number.isInteger(samples)||samples<16||samples>100000)throw new RangeError('Use an integer sample count between 16 and 100,000.');
+  const {sideY,underJoinX,carveBlend,corner}=result.geometry;
+  const count=Math.max(8,Math.ceil(samples/8));
+  const topCore=Array.from({length:count+1},(_,i)=>{
+    const x=corner.joinX*i/count;return [x,surface(x,params).y];
+  });
+  const cornerPoints=corner.radius>0?Array.from({length:Math.max(16,Math.ceil(count/4))},(_,i)=>
+    cornerPoint(corner,(i+1)/Math.max(16,Math.ceil(count/4)))):[];
+  const carved=Array.from({length:count},(_,i)=>bezier(carveBlend,(i+1)/count));
+  const bottomCore=Array.from({length:count},(_,i)=>{
+    const x=underJoinX*(1-(i+1)/count);return [x,surface(x,params,true).y];
+  });
+  const sideBottom=[params.width/2,sideY];
+  const right=[...topCore,...cornerPoints,sideBottom,...carved,...bottomCore];
+  const points=[...right,...right.slice(0,-1).reverse().map(([x,y])=>[-x,y])];
+  const lowerRight=[sideBottom,...carved,...bottomCore];
+  const underside=[...lowerRight,...lowerRight.slice(0,-1).reverse().map(([x,y])=>[-x,y])];
+  return {params:{...params},points,underside,top:0,bottom:-params.thickness,
+    ...result.geometry,joinX:corner.joinX,cornerMidpoint:cornerPoint(corner,.5)};
+}
+
+export function exportSvg(profile) {
+  const {width,thickness,radius,blend}=profile.params;
+  const margin=5;
+  const path=profile.points.map(([x,y],i)=>`${i?'L':'M'}${x.toFixed(6)} ${(-y).toFixed(6)}`).join(' ')+' Z';
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width+2*margin}mm" height="${thickness+2*margin}mm" viewBox="${-width/2-margin} ${-margin} ${width+2*margin} ${thickness+2*margin}">\n<title>Viol fingerboard: W ${width}, R ${radius}, T ${thickness}, B ${blend} mm</title>\n<desc>1:1 outline in millimetres. Fixed circular playing surface and flat side walls; quartic underside carved up into the sides. B is only the small top-corner rounding radius; zero leaves a sharp corner. Print at 100 percent.</desc>\n<path d="${path}" fill="none" stroke="black" stroke-width="0.15"/>\n</svg>\n`;
+}

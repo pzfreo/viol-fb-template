@@ -1,5 +1,5 @@
-# Simple workflow for deploying static content to GitHub Pages
-name: Deploy static content to Pages
+# Build the standalone client-side app and publish it to GitHub Pages.
+name: Deploy Fingerboard Studio to Pages
 
 on:
   # Runs on pushes targeting the default branch
@@ -22,7 +22,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # Single deploy job since we're just deploying
+  # Tests must pass before building and publishing the static client.
   deploy:
     environment:
       name: github-pages
@@ -31,13 +31,20 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test
+        run: npm test --prefix site
+      - name: Build standalone app
+        run: npm run build --prefix site
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # Upload entire repository
-          path: '.'
+          path: site/dist/client
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5

@@ -1,0 +1,24 @@
+{
+  "meares1": {
+    "parameters_mm": {
+      "width": 60,
+      "radius": 70.25,
+      "thickness": 26.87,
+      "blend": 4
+    },
+    "side_before_corner_rounding_mm": 2.6870000000000003,
+    "remaining_flat_side_mm": 0.0997619818701061,
+    "alignment": "equal source width, crown aligned; no best-fit translation, scaling or rotation beyond this registration"
+  },
+  "meares2": {
+    "parameters_mm": {
+      "width": 60,
+      "radius": 69.38,
+      "thickness": 25.55,
+      "blend": 0.5
+    },
+    "side_before_corner_rounding_mm": 2.555,
+    "remaining_flat_side_mm": 2.2394595653218516,
+    "alignment": "equal source width, crown aligned; no best-fit translation, scaling or rotation beyond this registration"
+  }
+}

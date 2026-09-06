@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Shape a viol fingerboard with four precise controls. Compare Meares cross sections and download a full-scale outline. Everything runs in your browser.">
+  <title>Fingerboard Studio — Viol profiles</title>
+  <link rel="stylesheet" href="./src/style.css">
+</head>
+<body>
+  <header class="header"><a class="brand" href="./"><span class="brand-mark" aria-hidden="true">Ⅳ</span><span>FINGERBOARD<span class="brand-light"> STUDIO</span></span></a><span class="header-note"><i></i> A tool for viol makers</span></header>
+  <main>
+    <section class="intro"><div><p class="eyebrow">THE CROSS-SECTION WORKSHOP</p><h1>A feel for the curve.</h1><p class="intro-copy">Shape the playing surface, the underside, and everything between.</p></div><div class="intro-detail">INSPIRED BY MEARES<br><span>Made to explore. Ready to trace.</span></div></section>
+    <section class="fingerboard-panel" aria-labelledby="fingerboard-title">
+      <h2 id="fingerboard-title">Two fret templates, one design</h2>
+      <p class="fingerboard-copy">Enter six measurements to make both underside templates together. Fingerboard length is measured from the nut to its end; string length is the vibrating length from nut to bridge. All values are in millimetres.</p>
+      <div class="fingerboard-inputs">
+        <label for="nutWidth">Width at nut<input id="nutWidth" type="number" min="0.01" step="any" inputmode="decimal" placeholder="mm"></label>
+        <label for="endWidth">Width at end<input id="endWidth" type="number" min="0.01" step="any" inputmode="decimal" placeholder="mm"></label>
+        <label for="boardLength">Fingerboard length<input id="boardLength" type="number" min="0.01" step="any" inputmode="decimal" placeholder="mm"></label>
+        <label for="stringLength">String length<input id="stringLength" type="number" min="0.01" step="any" inputmode="decimal" placeholder="mm"></label>
+        <label for="thickness1">Max. thickness at fret 1<input id="thickness1" type="number" min="0.01" step="any" inputmode="decimal" placeholder="mm"></label>
+        <label for="thickness7">Max. thickness at fret 7<input id="thickness7" type="number" min="0.01" step="any" inputmode="decimal" placeholder="mm"></label>
+      </div>
+      <label class="field-label" for="pair-name">SHARED STENCIL NAME</label><input id="pair-name" class="name-input" value="Viol" maxlength="29" autocomplete="off" spellcheck="false">
+      <p id="fingerboard-message" class="validation" role="status" aria-live="polite">Enter all six measurements to generate the pair.</p>
+      <div class="section-table-wrap"><table class="section-table"><thead><tr><th scope="col">Section</th><th scope="col">From nut</th><th scope="col">Width</th><th scope="col">Max. thickness</th></tr></thead><tbody id="section-results"></tbody></table></div>
+      <p class="fingerboard-copy">Assumes straight tapered sides and equal-tempered frets. Both sections use the shared design below, with their own calculated width and entered thickness. Crown curvature scales with width; corner drop scales with thickness.</p>
+      <button type="button" id="export-pair" class="primary-button" disabled>Download both templates <span aria-hidden="true">↓</span></button>
+      <p class="template-hint">One SVG containing two separate plates, labelled with your name and F1 / F7. Full size in mm; import and extrude for 3D printing.</p>
+      <div class="pair-preview" id="pair-preview" hidden><img id="pair-image" alt="Fret 1 and fret 7 underside templates with stencil names"></div>
+    </section>
+    <div class="workspace">
+      <aside class="controls" aria-label="Profile parameters">
+        <div class="panel-heading"><h2>Your profile</h2><button type="button" class="text-button" id="reset">Reset</button></div>
+        <label class="field-label" for="preset">STARTING POINT</label>
+        <select id="preset"><option value="custom">Workshop default</option><option value="meares1">Meares 1 inspired</option><option value="meares2">Meares 2 inspired</option></select>
+        <p class="preset-note">A symmetric interpretation of the drawings.</p>
+        <div id="parameter-controls"></div>
+        <div class="blend-note"><span class="note-symbol">D</span><p><strong>Carve first. Ease the corner last.</strong> The underside blends up into the flat sides. Corner drop lowers and softens the top edge while preserving the underside.</p></div>
+        <p id="validation" class="validation" role="status" aria-live="polite"></p>
+      </aside>
+      <section class="drawing-panel" aria-label="Live fingerboard preview">
+        <div class="drawing-toolbar"><div><span class="eyebrow">LIVE CROSS SECTION</span><span class="drawing-tag" id="drawing-tag">Custom profile</span></div><label class="check-label"><input id="grid" type="checkbox" checked> Grid</label></div>
+        <div class="canvas-wrap"><canvas id="profile-canvas" aria-label="Live cross section with a shallow playing surface and rounded underside" role="img"></canvas><div class="canvas-legend"><span><i class="legend-line"></i> Your profile</span><span id="reference-legend" hidden><i class="legend-line dashed"></i> Meares trace</span></div><span class="canvas-scale">ALL DIMENSIONS IN MM · PREVIEW FITS TO SCREEN</span></div>
+        <div class="reference-row"><label for="reference">Compare a drawing</label><select id="reference"><option value="none">No overlay</option><option value="meares1">Meares 1 · equal width</option><option value="meares2">Meares 2 · equal width</option></select><button type="button" class="text-button" id="view-source" disabled>View original ↗</button></div>
+        <div class="measurements"><div><span>WIDTH</span><strong id="metric-width"></strong></div><div><span>CROWN RADIUS</span><strong id="metric-radius"></strong></div><div><span>MAX. THICKNESS</span><strong id="metric-thickness"></strong></div><div><span>CORNER DROP</span><strong id="metric-cornerDrop"></strong></div></div>
+      </section>
+    </div>
+    <section class="template-panel" aria-label="Printable underside template">
+      <div class="template-settings"><p class="eyebrow">FROM SCREEN TO WORKBENCH</p><h2>A template with your name on it.</h2><p class="template-copy">The underside becomes a matching gauge, with your name cut through the plate as a stencil.</p><label class="field-label" for="template-name">STENCIL NAME</label><input id="template-name" class="name-input" value="My viol" maxlength="32" autocomplete="off" spellcheck="false"><p id="template-message" class="template-message" role="status" aria-live="polite"></p><button type="button" id="export-template" class="primary-button">Download underside template <span aria-hidden="true">↓</span></button><p class="template-hint">SVG · full size in mm · import and extrude to your preferred thickness, for example 3 mm.</p></div>
+      <div class="template-preview"><span class="eyebrow">SOLID PLATE · STENCIL CUT-OUTS</span><canvas id="template-canvas" role="img" aria-label="Underside gauge with the entered name cut through its body"></canvas></div>
+    </section>
+    <section class="export-bar"><div><h2>Just the fingerboard outline?</h2><p>Download the complete cross section as a full-scale SVG.</p></div><div class="export-actions"><button type="button" id="export-svg" class="secondary-button">Download outline SVG <span aria-hidden="true">↓</span></button></div></section>
+    <details class="model-notes"><summary>About the curve &amp; the measurements <span aria-hidden="true">+</span></summary><div><p>The playing arc is made first with flat vertical sides. The underside is then carved up to meet those sides smoothly. Finally, a small circular rounding removes the sharp top corner. Set corner drop to zero to see the unsoftened corner. The rounding radius is calculated from the drop. The underside is completely independent of this finishing cut. The current construction preset retains a nominal flat side of 10% of the centre thickness before rounding.</p><p>The Meares overlays are digitized drawing outlines scaled to your chosen width. The presets are interpretations, not exact reproductions. The originals have no physical scale. The underside template follows the lower half of the curve, including the carved transitions into the sides, and adds a 20 mm backing band. The label is vector geometry with bridges through enclosed letter counters. Some combinations cannot form a convex profile with a flatter playing surface; adjust the controls if a message appears.</p><p>SVG dimensions are in millimetres. Print at 100% and check the width before using a template. The preview is scaled to fit your screen. All calculations and downloads happen on your device.</p></div></details>
+  </main>
+  <footer><span>FINGERBOARD STUDIO</span><span>Four dimensions. One continuous curve.</span><span>Runs entirely in your browser</span></footer>
+  <dialog id="source-dialog"><div class="dialog-heading"><h2 id="source-title">Original drawing</h2><button id="close-dialog" type="button" class="secondary-button">Close</button></div><img id="source-image" alt="Original Meares fingerboard cross-section drawing"><p>Reference drawing only. No physical scale supplied.</p></dialog>
+  <div id="download-status" class="sr-only" role="status" aria-live="polite"></div>
+  <script type="module" src="./src/app.js"></script>
+</body>
+</html>
