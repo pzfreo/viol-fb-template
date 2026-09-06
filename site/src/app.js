@@ -3,6 +3,7 @@ import { REFERENCES } from './references.js';
 import { makeTemplate, exportTemplateSvg } from './template.js';
 import { fingerboardSections } from './fingerboard.js';
 import { makeTemplatePair, exportTemplatePairSvg } from './template-pair.js';
+import { parseOverstandExport } from './overstand.js';
 
 const $ = id => document.getElementById(id);
 const fields = [
@@ -67,6 +68,7 @@ function updateFingerboard() {
   if(pairPreviewUrl){URL.revokeObjectURL(pairPreviewUrl);pairPreviewUrl=null;}
   const keys=['nutWidth','endWidth','boardLength','stringLength','thickness1','thickness7'];
   const dimensions=Object.fromEntries(keys.map(key=>[key,$(key).value===''?NaN:Number($(key).value)]));
+  if($('pair-radius').value!=='')dimensions.topRadius=Number($('pair-radius').value);
   if(keys.every(key=>$(key).value==='')){
     message.textContent='Enter all six measurements to generate the pair.';message.classList.remove('error');return;
   }
@@ -89,7 +91,25 @@ function updateFingerboard() {
     message.textContent=error.message;message.classList.add('error');
   }
 }
-for(const key of ['nutWidth','endWidth','boardLength','stringLength','thickness1','thickness7','pair-name'])$(key).addEventListener('input',updateFingerboard);
+for(const key of ['nutWidth','endWidth','boardLength','stringLength','thickness1','thickness7','pair-name','pair-radius'])$(key).addEventListener('input',updateFingerboard);
+let importSequence=0;
+$('overstand-file').addEventListener('change',async()=>{
+  const sequence=++importSequence,file=$('overstand-file').files[0];
+  if(!file)return;
+  try {
+    if(file.size>1024*1024)throw new RangeError('Choose a parameter export smaller than 1 MB.');
+    const imported=parseOverstandExport(await file.text());
+    if(sequence!==importSequence)return;
+    for(const [key,value]of Object.entries(imported.dimensions))$(key).value=value;
+    $('pair-radius').value=imported.radius??'';$('pair-name').value=imported.name;
+    // A new instrument must not inherit the previous instrument's thicknesses.
+    $('thickness1').value='';$('thickness7').value='';
+    $('import-message').textContent=`Imported ${imported.name||file.name}. Enter maximum thickness at frets 1 and 7 to generate the templates.`;
+    updateFingerboard();
+  } catch(error){
+    if(sequence===importSequence)$('import-message').textContent=error.message;
+  } finally {if(sequence===importSequence)$('overstand-file').value='';}
+});
 $('export-pair').addEventListener('click',()=>{
   if(!currentPair)return;
   const name=$('pair-name').value.trim().replace(/[^A-Za-z0-9.-]+/g,'-').replace(/^-+|-+$/g,'')||'Viol';

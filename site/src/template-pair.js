@@ -11,7 +11,7 @@ export function makeTemplatePair(dimensions, shared, name) {
       if(!section.onBoard)throw new RangeError('This fret is beyond the fingerboard end.');
       const thickness=dimensions[`thickness${section.fret}`];
       if(!Number.isFinite(thickness)||thickness<=0)throw new RangeError('Enter a positive maximum thickness.');
-      const params={width:section.width,radius:shared.radius*section.width/shared.width,thickness};
+      const params={width:section.width,radius:dimensions.topRadius??shared.radius*section.width/shared.width,thickness};
       params.blend=radiusForCornerDrop(dropRatio*thickness,params);
       const profile=generate(params);
       return {...section,profile,template:makeTemplate(profile,`${name.trim()} F${section.fret}`)};

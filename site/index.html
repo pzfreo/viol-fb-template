@@ -12,6 +12,7 @@
     <section class="intro"><div><p class="eyebrow">THE CROSS-SECTION WORKSHOP</p><h1>A feel for the curve.</h1><p class="intro-copy">Shape the playing surface, the underside, and everything between.</p></div><div class="intro-detail">INSPIRED BY MEARES<br><span>Made to explore. Ready to trace.</span></div></section>
     <section class="fingerboard-panel" aria-labelledby="fingerboard-title">
       <h2 id="fingerboard-title">Two fret templates, one design</h2>
+      <div class="overstand-import"><label for="overstand-file" class="field-label">IMPORT OVERSTAND PARAMETERS</label><input id="overstand-file" type="file" accept=".json,application/json"><p id="import-message" class="fingerboard-copy" role="status" aria-live="polite">Import fills the taper dimensions, name and playing radius. Enter the two maximum thicknesses separately. The file stays on your device.</p></div>
       <p class="fingerboard-copy">Enter six measurements to make both underside templates together. Fingerboard length is measured from the nut to its end; string length is the vibrating length from nut to bridge. All values are in millimetres.</p>
       <div class="fingerboard-inputs">
         <label for="nutWidth">Width at nut<input id="nutWidth" type="number" min="0.01" step="any" inputmode="decimal" placeholder="mm"></label>
@@ -21,10 +22,11 @@
         <label for="thickness1">Max. thickness at fret 1<input id="thickness1" type="number" min="0.01" step="any" inputmode="decimal" placeholder="mm"></label>
         <label for="thickness7">Max. thickness at fret 7<input id="thickness7" type="number" min="0.01" step="any" inputmode="decimal" placeholder="mm"></label>
       </div>
+      <div class="pair-radius"><label for="pair-radius">Playing radius for both sections (optional)<input id="pair-radius" type="number" min="0.01" step="any" inputmode="decimal" placeholder="Use shared profile"></label><p class="fingerboard-copy">If provided, this radius stays fixed at both frets. Otherwise, it scales with width from the shared design.</p></div>
       <label class="field-label" for="pair-name">SHARED STENCIL NAME</label><input id="pair-name" class="name-input" value="Viol" maxlength="29" autocomplete="off" spellcheck="false">
       <p id="fingerboard-message" class="validation" role="status" aria-live="polite">Enter all six measurements to generate the pair.</p>
       <div class="section-table-wrap"><table class="section-table"><thead><tr><th scope="col">Section</th><th scope="col">From nut</th><th scope="col">Width</th><th scope="col">Max. thickness</th></tr></thead><tbody id="section-results"></tbody></table></div>
-      <p class="fingerboard-copy">Assumes straight tapered sides and equal-tempered frets. Both sections use the shared design below, with their own calculated width and entered thickness. Crown curvature scales with width; corner drop scales with thickness.</p>
+      <p class="fingerboard-copy">Assumes straight tapered sides and equal-tempered frets. Both sections use the shared design below, with their own calculated width and entered thickness. Corner drop scales with thickness.</p>
       <button type="button" id="export-pair" class="primary-button" disabled>Download both templates <span aria-hidden="true">↓</span></button>
       <p class="template-hint">One SVG containing two separate plates, labelled with your name and F1 / F7. Full size in mm; import and extrude for 3D printing.</p>
       <div class="pair-preview" id="pair-preview" hidden><img id="pair-image" alt="Fret 1 and fret 7 underside templates with stencil names"></div>
