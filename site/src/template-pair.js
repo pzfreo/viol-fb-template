@@ -2,11 +2,10 @@ import { fingerboardSections } from './fingerboard.js';
 import { construction, radiusForCornerDrop, generate } from './profile.js';
 import { makeTemplate, polygonPath } from './template.js';
 
-export function makeTemplatePair(dimensions, shared, name) {
-  if(!name.trim())throw new RangeError('Add a shared stencil name.');
+export function makeSectionProfiles(dimensions, shared) {
   const geometry=construction(shared);
   const dropRatio=(geometry.edgeY-geometry.corner.sideTopY)/shared.thickness;
-  const sections=fingerboardSections(dimensions).map(section=>{
+  return fingerboardSections(dimensions).map(section=>{
     try {
       if(!section.onBoard)throw new RangeError('This fret is beyond the fingerboard end.');
       const thickness=dimensions[`thickness${section.fret}`];
@@ -14,8 +13,16 @@ export function makeTemplatePair(dimensions, shared, name) {
       const params={width:section.width,radius:dimensions.topRadius??shared.radius*section.width/shared.width,thickness};
       params.blend=radiusForCornerDrop(dropRatio*thickness,params);
       const profile=generate(params);
-      return {...section,profile,template:makeTemplate(profile,`${name.trim()} F${section.fret}`)};
+      return {...section,profile};
     } catch(error) {throw new RangeError(`Fret ${section.fret}: ${error.message}`);}
+  });
+}
+
+export function makeTemplatePair(dimensions, shared, name) {
+  if(!name.trim())throw new RangeError('Add a shared stencil name.');
+  const sections=makeSectionProfiles(dimensions,shared).map(section=>{
+    try {return {...section,template:makeTemplate(section.profile,`${name.trim()} F${section.fret}`)};}
+    catch(error){throw new RangeError(`Fret ${section.fret}: ${error.message}`);}
   });
   const margin=2,gap=10;
   let left=margin;

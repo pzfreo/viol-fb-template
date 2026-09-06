@@ -1,6 +1,6 @@
 # Fingerboard Studio
 
-A dependency-free, client-side viol fingerboard designer with four dimensions, Meares reference overlays and named underside checking templates. No accounts, external font requests, backend geometry service or CSV export.
+A self-contained, client-side viol fingerboard designer with F1/F7 section review, Meares reference overlays and named underside checking templates. No accounts, external font requests, backend geometry service or CSV export.
 
 ```sh
 cd site
@@ -19,16 +19,25 @@ npm run build
 GitHub Pages publishes this app at https://pzfreo.github.io/viol-fb-template/.
 The repository's `.github/workflows/static.yml` runs the tests and build with Node 22, then uploads only `site/dist/client`. Pushes to `main` deploy automatically; the workflow can also be run manually. No dependency installation is needed. Embedded assets and relative links work under the repository's Pages subpath.
 
-## Four dimensions
+## Review workflow
 
-| Control | Meaning |
+1. Enter or import the taper and string measurements, then enter maximum thickness at frets 1 and 7.
+2. Review the actual sections using the F1/F7 tabs. Adjust corner drop on the selected section; the same drop/thickness ratio applies to both. Arrow keys, Home and End switch tabs from the keyboard.
+3. Optionally download the selected section as a full-size outline SVG.
+4. Enter the stencil name, review the paired template preview, and download template SVG or 3MF.
+
+The diagram is independent of stencil-name validation: a long or unsupported name blocks templates but still allows section review and outline download. Invalid section dimensions clear the diagram and disable geometry downloads rather than showing stale geometry.
+
+## Section dimensions
+
+| Dimension | Meaning |
 | --- | --- |
 | Width W | Full physical width between the two side extrema. |
 | Crown radius R | Radius of the **fixed circular playing surface**. |
 | Maximum thickness T | Vertical separation from the crown to the underside centre. |
 | Corner drop D | Vertical distance from the original top corner down to where the rounding meets the side. Zero leaves a sharp corner. |
 
-Changing D leaves the entire underside carving unchanged. It trims only the top corner, joining the fixed playing circle to the flat side with a small circular fillet. The rounding radius is calculated internally from D; there is no separate radius control. Changing width, crown radius or thickness preserves the entered drop. The retained playing surface stays on the same circle. Width and maximum thickness remain fixed.
+Changing D leaves the entire underside carving unchanged. It trims only the top corner, joining the fixed playing circle to the flat side with a small circular fillet. The rounding radius is calculated internally from D; there is no separate radius control. The displayed drop is for the selected fret. Changing section thickness preserves the shared drop/thickness ratio. The retained playing surface stays on the same circle. Width and maximum thickness remain fixed.
 
 The crown is `(0, 0)` and the underside centre is `(0, -T)`. With `a = W/2`, the playing curve is:
 
@@ -48,7 +57,7 @@ The quartic proportions are a chosen design family, not a recovered historical c
 
 The construction starts with vertical sides below the playing arc. A nominal flat side of `0.1 T` remains before corner rounding. This retained height is an explicit assumption, not a measurement recovered from the scans. The underside is carved up into the bottom of that wall with a quintic Bézier transition spanning `0.12 W`, matching tangent and curvature at the quartic and the straight wall (G2). The final circular corner fillet has tangent continuity (G1); its curvature changes at the joins.
 
-Validation rejects incomplete dimensions, insufficient underside depth, nonconvex carving transitions, and corner rounding that consumes the flat side. Bernstein bounds and recursive subdivision check the carving curvature. If a combination is invalid, the preview explicitly shows the last valid profile and downloads are disabled.
+Validation rejects incomplete dimensions, insufficient underside depth, nonconvex carving transitions, and corner rounding that consumes the flat side. Bernstein bounds and recursive subdivision check the carving curvature. If a combination is invalid, the section preview asks for valid measurements and geometry downloads are disabled.
 
 The [latest comparison](../analysis/latest-meares-overlay.png) uses a 4 mm corner radius for Meares 1, giving about 2.59 mm of corner drop and 0.10 mm of remaining flat wall at the assumed 60 mm width. This lowers the top corners while preserving the previously accepted underside. Meares 2 retains its 0.5 mm corner radius. These remain symmetric interpretations of asymmetric drawings.
 
@@ -60,7 +69,15 @@ Both sections use one shared design; there is no drawing-to-fret assignment. Eac
 
 **Import Overstand parameters** reads the `.json` parameter export entirely in the browser. It maps `fingerboard_width_at_nut`, `fingerboard_width_at_end`, `fingerboard_length`, `vsl`, `instrument_name` and optional `fingerboard_radius`. The last value sets the explicit playing radius for both sections. Import clears both maximum-thickness fields for the user to enter; visible-edge heights, Overstand blend percentage and derived board thicknesses are not substituted for them. Invalid files leave existing form values intact. The imported name stays editable, including when it must be shortened to fit the smaller stencil with its F1/F7 suffix.
 
-The shared stencil name receives `F1` and `F7` suffixes. **Download both templates** exports one full-size SVG with two separate plates, separated by 10 mm, with 2 mm viewport margins. The pair is regenerated when measurements, shared design or name change. An invalid section or name disables the whole pair to prevent partial output. The preview shows the actual exported SVG. The app has one download action for the pair; separate single-template and outline downloads are not shown.
+The shared stencil name receives `F1` and `F7` suffixes. **Download SVG** exports one full-size SVG with two separate plates, separated by 10 mm, with 2 mm viewport margins. The pair is regenerated when measurements, shared design or name change. An invalid section or name disables the whole pair to prevent partial output. The preview shows the actual exported SVG. The app offers SVG and 3MF formats for the same pair; the optional section outline download is in the review step, while both template formats are in the final printing step.
+
+## Direct 3MF download
+
+**Download 3MF** produces two separate named mesh objects and build items, F1 and F7, in millimetres. Both plates lie flat at Z=0 with a **1.5 mm default print thickness**. The Printed plate thickness control changes only the extrusion depth, with a supported range of 0.1–20 mm. SVG outlines and fingerboard maximum thicknesses are unaffected. Open the file in a slicer and choose your printer and material settings; this is a geometry 3MF, not pre-sliced machine instructions.
+
+The exporter follows the [3MF Core specification](https://github.com/3MFConsortium/spec_core/blob/master/3MF%20Core%20Specification.md). It triangulates the actual stencil polygons, preserves the through-cut lettering, joins cap and wall vertices, and writes a ZIP/OPC package containing two meshes. It uses vendored [Earcut 3.2.3](https://github.com/mapbox/earcut/tree/v3.2.3), with its ISC license retained in the source and standalone HTML. Collinear triangulation edges are split to prevent T-junctions. No runtime network calls or package installation are needed.
+
+Checks cover closed edges, consistent face winding, connected solids, open stencil holes, positive volume, Z bounds, and unchanged XY geometry when print thickness changes. All supported letters and digits are exercised. A generated pair was independently read by Bambu Studio 02.08.02.61: both objects reported manifold, one part each, and 1.5 mm thickness. Python ZIP/XML and polygon checks also verified the archive and matching SVG/mesh faces.
 
 ## Named underside template
 
@@ -70,7 +87,7 @@ The bundled Allerta Stencil font is copied from the local Overstand checkout. Th
 
 Supported names contain Latin A–Z / a–z, digits, spaces and `. - ( )`, up to 32 characters and subject to fitting the plate. Labels fit at a capital height of 4.5–6 mm; names that cannot fit are rejected rather than clipped or shrunk indefinitely.
 
-The template SVG is a **filled 2D extrusion profile**, like the supplied example. Import it into a CAD or slicer application with SVG support, preserve millimetres, and extrude to the desired thickness (for example 3 mm). An STL is not generated. Printability of the original font's small bridges depends on the printer and settings; inspect the sliced result. The geometry module also retains a 1:1 outline export helper for programmatic use.
+The template SVG is a **filled 2D extrusion profile**, like the supplied example. Use the 3MF download for already-extruded plates, or import SVG into CAD for further editing. An STL is not generated. Printability of the original font's small bridges depends on the printer and settings; inspect the sliced result. The review step exports the selected F1 or F7 outline at 1:1 scale.
 
 ## Checks
 

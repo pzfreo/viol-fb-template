@@ -1,76 +1,83 @@
-import { DEFAULTS, PRESETS, validate, generate, construction, radiusForCornerDrop } from './profile.js';
+import { DEFAULTS, PRESETS, validate, exportSvg, construction, radiusForCornerDrop } from './profile.js';
 import { REFERENCES } from './references.js';
 import { fingerboardSections } from './fingerboard.js';
-import { makeTemplatePair, exportTemplatePairSvg } from './template-pair.js';
+import { makeSectionProfiles, makeTemplatePair, exportTemplatePairSvg } from './template-pair.js';
 import { parseOverstandExport } from './overstand.js';
+import { exportTemplatePair3mf, validatePrintThickness } from './three-mf.js';
 
 const $ = id => document.getElementById(id);
-const fields = [
-  { key: 'width', title: 'Fingerboard width', symbol: 'W', min: 30, max: 100, step: .1, hint: 'The full distance from side to side.' },
-  { key: 'radius', title: 'Crown radius', symbol: 'R', min: 30, max: 160, step: .1, hint: 'A larger radius makes the centre flatter.' },
-  { key: 'thickness', title: 'Maximum thickness', symbol: 'T', min: 10, max: 45, step: .1, hint: 'The depth through the centre of the board.' },
-  { key: 'cornerDrop', title: 'Corner drop', symbol: 'D', min: 0, max: 4, step: .05, hint: 'Vertical lowering from the original top corner. Zero leaves it sharp; the underside stays fixed.' },
-];
 let params = { ...DEFAULTS };
-let lastValid = generate(params);
-let cornerDrop = lastValid.edgeY-lastValid.corner.sideTopY;
 let selectedPreset = 'custom';
+let selectedFret = 1;
+let lastValid = null;
+let currentSections = [];
 let currentPair = null;
 let pairPreviewUrl = null;
-let profileValid = true;
+let profileValid = false;
 let drawFrame = 0;
-const values = {};
-function fieldValue(key, profile = null) {
-  if(key !== 'cornerDrop')return (profile?.params || params)[key];
-  return profile ? profile.edgeY-profile.corner.sideTopY : cornerDrop;
+const dimensionKeys=['nutWidth','endWidth','boardLength','stringLength','thickness1','thickness7'];
+function fieldValue(key, profile) {
+  return key==='cornerDrop'?profile.edgeY-profile.corner.sideTopY:profile.params[key];
 }
-
-for (const field of fields) {
-  const section = document.createElement('div');
-  section.className = 'parameter';
-  // All interpolated strings here are fixed product labels, never user input.
-  section.innerHTML = `<div class="parameter-heading"><label for="${field.key}-number"><span class="parameter-symbol">${field.symbol}</span>${field.title}</label><div class="number-wrap"><input id="${field.key}-number" type="number" min="${field.key === 'cornerDrop' ? 0 : 0.01}" max="${field.key === 'cornerDrop' ? 100 : 1000}" step="${field.step}" inputmode="decimal" aria-describedby="${field.key}-hint"><span>mm</span></div></div><p id="${field.key}-hint">${field.hint}</p><input id="${field.key}-slider" type="range" min="${field.min}" max="${field.max}" step="${field.step}" aria-label="${field.title} slider"><div class="range-labels"><span>${field.min} mm</span><span>${field.max} mm</span></div>`;
-  $('parameter-controls').append(section);
-  const number = $(`${field.key}-number`), slider = $(`${field.key}-slider`);
-  values[field.key] = { number, slider };
-  const change = (event) => {
-    const value = event.target.value === '' ? NaN : Number(event.target.value);
-    if(field.key === 'cornerDrop')cornerDrop = value;
-    else params[field.key] = value;
-    // Preserve the user's drop when another dimension changes.
-    params.blend = radiusForCornerDrop(cornerDrop,params);
-    if (event.target === slider) number.value = slider.value;
-    else if (Number.isFinite(value)) slider.value = value;
-    selectedPreset = 'custom';
-    $('preset').value = 'custom';
-    update();
-  };
-  number.addEventListener('input', change);
-  slider.addEventListener('input', change);
-}
-
-function syncControls() {
-  const geometry=construction(params);
-  cornerDrop=geometry.edgeY-geometry.corner.sideTopY;
-  for (const { key } of fields) {
-    const value=fieldValue(key);
-    values[key].number.value = Number(value.toFixed(4));
-    values[key].slider.value = value;
-  }
-}
-
-function updateFingerboard() {
-  const body=$('section-results');body.replaceChildren();
-  const message=$('fingerboard-message');
-  currentPair=null;$('export-pair').disabled=true;$('pair-preview').hidden=true;
-  if(pairPreviewUrl){URL.revokeObjectURL(pairPreviewUrl);pairPreviewUrl=null;}
-  const keys=['nutWidth','endWidth','boardLength','stringLength','thickness1','thickness7'];
-  const dimensions=Object.fromEntries(keys.map(key=>[key,$(key).value===''?NaN:Number($(key).value)]));
+function readDimensions() {
+  const dimensions=Object.fromEntries(dimensionKeys.map(key=>[key,$(key).value===''?NaN:Number($(key).value)]));
   if($('pair-radius').value!=='')dimensions.topRadius=Number($('pair-radius').value);
-  if(keys.every(key=>$(key).value==='')){
-    message.textContent='Enter all six measurements to generate the pair.';message.classList.remove('error');return;
+  return dimensions;
+}
+function selectedThickness() {return Number($(`thickness${selectedFret}`).value);}
+function syncControls() {
+  if(!Number.isFinite(params.blend))return;
+  const geometry=construction(params),ratio=(geometry.edgeY-geometry.corner.sideTopY)/params.thickness;
+  const thickness=selectedThickness(),value=ratio*thickness;
+  if(Number.isFinite(value)){
+    $('cornerDrop-number').value=Number(value.toFixed(4));$('cornerDrop-slider').value=value;
   }
+}
+for(const id of ['cornerDrop-number','cornerDrop-slider'])$(id).addEventListener('input',event=>{
+  const thickness=selectedThickness();
+  const value=event.target.value===''?NaN:Number(event.target.value);
+  params.blend=radiusForCornerDrop(value*params.thickness/thickness,params);
+  if(id==='cornerDrop-slider')$('cornerDrop-number').value=value;
+  else if(Number.isFinite(value))$('cornerDrop-slider').value=value;
+  selectedPreset='custom';$('preset').value='custom';
+  update(true);
+});
+function selectFret(fret) {
+  selectedFret=fret;
+  for(const n of [1,7]){
+    $(`tab-f${n}`).setAttribute('aria-selected',String(n===fret));
+    $(`tab-f${n}`).tabIndex=n===fret?0:-1;
+  }
+  $('section-diagram').setAttribute('aria-labelledby',`tab-f${fret}`);
+  update();
+}
+for(const fret of [1,7]){
+  $(`tab-f${fret}`).addEventListener('click',()=>selectFret(fret));
+  $(`tab-f${fret}`).addEventListener('keydown',event=>{
+    if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;
+    event.preventDefault();const next=event.key==='Home'?1:event.key==='End'?7:fret===1?7:1;
+    selectFret(next);$(`tab-f${next}`).focus();
+  });
+}
+$('export-outline').addEventListener('click',()=>{
+  if(!lastValid||!profileValid)return;
+  download(exportSvg(lastValid),`${downloadName()}-F${selectedFret}-outline.svg`);
+});
+function downloadName(){return $('pair-name').value.trim().replace(/[^A-Za-z0-9.-]+/g,'-').replace(/^-+|-+$/g,'')||'Viol';}
+function updateFingerboard(){update();}
+function update(preserveCornerInput=false) {
+  const body=$('section-results');body.replaceChildren();
+  const message=$('fingerboard-message'),templateMessage=$('template-message');
+  currentPair=null;currentSections=[];lastValid=null;profileValid=false;
+  $('export-pair').disabled=true;$('export-3mf').disabled=true;$('export-outline').disabled=true;$('pair-preview').hidden=true;
+  if(pairPreviewUrl){URL.revokeObjectURL(pairPreviewUrl);pairPreviewUrl=null;}
+  const dimensions=readDimensions();
+  const empty=dimensionKeys.every(key=>$(key).value==='');
+  message.classList.remove('error');templateMessage.classList.remove('error');
+  templateMessage.textContent='Review the sections above, then download both templates.';
+  let issue='Enter all six measurements to review the sections.';
   try {
+    if(empty)throw new RangeError(issue);
     const sections=fingerboardSections(dimensions);
     for(const section of sections){
       const thickness=dimensions[`thickness${section.fret}`],row=document.createElement('tr');
@@ -79,16 +86,58 @@ function updateFingerboard() {
       }
       body.append(row);
     }
-    if(!profileValid)throw new RangeError('Resolve the shared profile dimensions below to generate the pair.');
-    currentPair=makeTemplatePair(dimensions,lastValid.params,$('pair-name').value);
-    pairPreviewUrl=URL.createObjectURL(new Blob([exportTemplatePairSvg(currentPair)],{type:'image/svg+xml'}));
-    $('pair-image').src=pairPreviewUrl;$('pair-preview').hidden=false;
-    $('export-pair').disabled=false;
-    message.textContent='Both templates are ready. F1 and F7 identify the fret positions.';message.classList.remove('error');
+    const validation=validate(params);if(!validation.valid)throw new RangeError(validation.message);
+    currentSections=makeSectionProfiles(dimensions,params);
+    lastValid=currentSections.find(s=>s.fret===selectedFret).profile;profileValid=true;
+    message.textContent='Your sections are ready to review in the F1 and F7 tabs below.';
+    issue='Rounding applies to both sections in proportion to their thickness.';
+    $('export-outline').disabled=false;
+    try {
+      currentPair=makeTemplatePair(dimensions,params,$('pair-name').value);
+      pairPreviewUrl=URL.createObjectURL(new Blob([exportTemplatePairSvg(currentPair)],{type:'image/svg+xml'}));
+      $('pair-image').src=pairPreviewUrl;$('pair-preview').hidden=false;$('export-pair').disabled=false;
+      templateMessage.textContent='Both templates are ready. F1 and F7 identify the fret positions.';
+    } catch(error){templateMessage.textContent=error.message;templateMessage.classList.add('error');}
   } catch(error) {
-    message.textContent=error.message;message.classList.add('error');
+    issue=error.message;message.textContent=issue;message.classList.toggle('error',!empty);
+  }
+  $('validation').textContent=issue;$('validation').classList.toggle('error',!empty&&!profileValid);
+  $('drawing-tag').textContent=`F${selectedFret} · ${profileValid?'Section at fret '+selectedFret:'Enter valid measurements'}`;
+  $('drawing-tag').classList.toggle('invalid',!empty&&!profileValid);
+  $('export-outline').textContent=`Download F${selectedFret} outline SVG`;
+  for(const key of ['width','radius','thickness','cornerDrop']){
+    const metric=$(`metric-${key}`);metric.replaceChildren(document.createTextNode(lastValid?fieldValue(key,lastValid).toFixed(2):'—'));
+    if(lastValid){const unit=document.createElement('small');unit.textContent='mm';metric.append(unit);}
+  }
+  const thickness=selectedThickness(),hasThickness=Number.isFinite(thickness)&&thickness>0;
+  $('cornerDrop-number').disabled=!hasThickness;$('cornerDrop-slider').disabled=!hasThickness;
+  $('cornerDrop-number').setAttribute('aria-invalid',String(!empty&&!profileValid));
+  $('cornerDrop-slider').max=hasThickness?thickness*.1:4;
+  $('cornerDrop-max').textContent=`${(hasThickness?thickness*.1:4).toFixed(2)} mm`;
+  if(!preserveCornerInput)syncControls();
+  updatePrintSettings();scheduleDraw();
+}
+function updatePrintSettings() {
+  try {
+    validatePrintThickness(Number($('print-thickness').value));
+    $('print-thickness').setAttribute('aria-invalid','false');
+    $('export-3mf').disabled=!currentPair;
+    $('print-message').textContent='3MF: two separate solid plates, ready to open in your slicer. SVG: the same flat outlines. Both include the F1 / F7 stencil names.';
+  } catch(error){
+    $('print-thickness').setAttribute('aria-invalid','true');$('export-3mf').disabled=true;
+    $('print-message').textContent=error.message;
   }
 }
+$('print-thickness').addEventListener('input',updatePrintSettings);
+$('export-3mf').addEventListener('click',()=>{
+  if(!currentPair)return;
+  try {
+    const thickness=Number($('print-thickness').value);
+    const data=exportTemplatePair3mf(currentPair,thickness);
+    const name=$('pair-name').value.trim().replace(/[^A-Za-z0-9.-]+/g,'-').replace(/^-+|-+$/g,'')||'Viol';
+    download(data,`${name}-F1-F7-${thickness}mm.3mf`,'model/3mf');
+  } catch(error){$('print-message').textContent=error.message;}
+});
 for(const key of ['nutWidth','endWidth','boardLength','stringLength','thickness1','thickness7','pair-name','pair-radius'])$(key).addEventListener('input',updateFingerboard);
 let importSequence=0;
 $('overstand-file').addEventListener('change',async()=>{
@@ -117,25 +166,6 @@ function scheduleDraw() {
   cancelAnimationFrame(drawFrame);
   drawFrame = requestAnimationFrame(drawProfile);
 }
-function update() {
-  const result = validate(params);
-  profileValid = result.valid;
-  if (result.valid) lastValid = generate(params);
-  $('validation').textContent = result.message;
-  $('validation').classList.toggle('error', !result.valid);
-  $('drawing-tag').textContent = result.valid ? selectedPreset === 'custom' ? 'Custom profile' : selectedPreset === 'meares1' ? 'Meares 1 inspired' : 'Meares 2 inspired' : 'Last valid profile';
-  $('drawing-tag').classList.toggle('invalid', !result.valid);
-  for (const { key } of fields) {
-    const metric = $(`metric-${key}`);
-    if(metric){
-      metric.replaceChildren(document.createTextNode(fieldValue(key,lastValid).toFixed(2)));
-      const unit = document.createElement('small'); unit.textContent = 'mm'; metric.append(unit);
-    }
-    values[key].number.setAttribute('aria-invalid', String(!result.valid));
-  }
-  updateFingerboard();
-  scheduleDraw();
-}
 function canvasContext(id) {
   const canvas = $(id), bounds = canvas.getBoundingClientRect();
   const width = bounds.width, height = bounds.height;
@@ -153,6 +183,12 @@ function drawProfile() {
   const { ctx, width, height } = canvasContext('profile-canvas');
   if (!width || !height) return;
   const p = lastValid;
+  ctx.fillStyle='#fdfcf9';ctx.fillRect(0,0,width,height);
+  if(!p){
+    ctx.fillStyle='#72766d';ctx.font='13px Arial';ctx.textAlign='center';
+    ctx.fillText(`Enter measurements above to review F${selectedFret}.`,width/2,height/2);
+    $('profile-canvas').setAttribute('aria-label',`Fret ${selectedFret}: enter valid measurements to see the section.`);return;
+  }
   const narrow = width < 440;
   const sidePadding = narrow ? 36 : 70;
   const scale = Math.min((width - sidePadding * 2) / p.params.width, (height - 165) / p.params.thickness);
@@ -199,7 +235,7 @@ function drawProfile() {
     ctx.beginPath(); ctx.moveTo(cornerX + 7, cornerY); ctx.lineTo(cornerX + 19, cornerY - 15); ctx.stroke();
     ctx.textAlign = 'left'; ctx.fillStyle = '#a65435'; ctx.font = 'italic 12px Georgia'; ctx.fillText(`D ${fieldValue('cornerDrop',p).toFixed(2)}`, cornerX + 8, cornerY - 20);
   }
-  $('profile-canvas').setAttribute('aria-label', `${profileValid ? 'Current' : 'Last valid'} profile: width ${p.params.width} mm, crown radius ${p.params.radius} mm, maximum thickness ${p.params.thickness} mm, corner drop ${fieldValue('cornerDrop',p).toFixed(2)} mm.`);
+  $('profile-canvas').setAttribute('aria-label', `Fret ${selectedFret} profile: width ${p.params.width} mm, crown radius ${p.params.radius} mm, maximum thickness ${p.params.thickness} mm, corner drop ${fieldValue('cornerDrop',p).toFixed(2)} mm.`);
 }
 function download(text, filename, type = 'image/svg+xml') {
   const url = URL.createObjectURL(new Blob([text], { type }));
@@ -237,4 +273,4 @@ $('close-dialog').addEventListener('click', () => $('source-dialog').close());
 $('source-dialog').addEventListener('click', event => { if (event.target === $('source-dialog')) $('source-dialog').close(); });
 const observer = new ResizeObserver(scheduleDraw);
 observer.observe($('profile-canvas').parentElement);
-syncControls(); update();
+update();

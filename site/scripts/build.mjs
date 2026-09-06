@@ -7,7 +7,7 @@ await rm(dist, { recursive: true, force: true });
 await mkdir(resolve(dist, 'client'), { recursive: true });
 await mkdir(resolve(dist, 'server'), { recursive: true });
 await mkdir(resolve(dist, '.openai'), { recursive: true });
-const modules = ['profile.js', 'fingerboard.js', 'overstand.js', 'references.js', 'stencil-font.js', 'template.js', 'template-pair.js', 'app.js'];
+const modules = ['profile.js', 'fingerboard.js', 'overstand.js', 'references.js', 'stencil-font.js', 'template.js', 'template-pair.js', 'vendor/earcut.js', 'three-mf.js', 'app.js'];
 let javascript = '';
 for (const file of modules) {
   const source = await readFile(resolve(root, 'src', file), 'utf8');
