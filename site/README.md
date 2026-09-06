@@ -60,7 +60,7 @@ Both sections use one shared design; there is no drawing-to-fret assignment. Eac
 
 **Import Overstand parameters** reads the `.json` parameter export entirely in the browser. It maps `fingerboard_width_at_nut`, `fingerboard_width_at_end`, `fingerboard_length`, `vsl`, `instrument_name` and optional `fingerboard_radius`. The last value sets the explicit playing radius for both sections. Import clears both maximum-thickness fields for the user to enter; visible-edge heights, Overstand blend percentage and derived board thicknesses are not substituted for them. Invalid files leave existing form values intact. The imported name stays editable, including when it must be shortened to fit the smaller stencil with its F1/F7 suffix.
 
-The shared stencil name receives `F1` and `F7` suffixes. **Download both templates** exports one full-size SVG with two separate plates, separated by 10 mm, with 2 mm viewport margins. The pair is regenerated when measurements, shared design or name change. An invalid section or name disables the whole pair to prevent partial output. The preview shows the actual exported SVG. The original single-section workflow remains available.
+The shared stencil name receives `F1` and `F7` suffixes. **Download both templates** exports one full-size SVG with two separate plates, separated by 10 mm, with 2 mm viewport margins. The pair is regenerated when measurements, shared design or name change. An invalid section or name disables the whole pair to prevent partial output. The preview shows the actual exported SVG. The app has one download action for the pair; separate single-template and outline downloads are not shown.
 
 ## Named underside template
 
@@ -70,7 +70,7 @@ The bundled Allerta Stencil font is copied from the local Overstand checkout. Th
 
 Supported names contain Latin A–Z / a–z, digits, spaces and `. - ( )`, up to 32 characters and subject to fitting the plate. Labels fit at a capital height of 4.5–6 mm; names that cannot fit are rejected rather than clipped or shrunk indefinitely.
 
-The template SVG is a **filled 2D extrusion profile**, like the supplied example. Import it into a CAD or slicer application with SVG support, preserve millimetres, and extrude to the desired thickness (for example 3 mm). An STL is not generated. Printability of the original font's small bridges depends on the printer and settings; inspect the sliced result. The separate outline export is a 1:1 line drawing for printing or further CAD work.
+The template SVG is a **filled 2D extrusion profile**, like the supplied example. Import it into a CAD or slicer application with SVG support, preserve millimetres, and extrude to the desired thickness (for example 3 mm). An STL is not generated. Printability of the original font's small bridges depends on the printer and settings; inspect the sliced result. The geometry module also retains a 1:1 outline export helper for programmatic use.
 
 ## Checks
 

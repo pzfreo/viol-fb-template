@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Shape a viol fingerboard with four precise controls. Compare Meares cross sections and download a full-scale outline. Everything runs in your browser.">
+  <meta name="description" content="Shape a viol fingerboard with four precise controls. Compare Meares cross sections and download both fret templates together. Everything runs in your browser.">
   <title>Fingerboard Studio — Viol profiles</title>
   <link rel="stylesheet" href="./src/style.css">
 </head>
@@ -48,11 +48,6 @@
         <div class="measurements"><div><span>WIDTH</span><strong id="metric-width"></strong></div><div><span>CROWN RADIUS</span><strong id="metric-radius"></strong></div><div><span>MAX. THICKNESS</span><strong id="metric-thickness"></strong></div><div><span>CORNER DROP</span><strong id="metric-cornerDrop"></strong></div></div>
       </section>
     </div>
-    <section class="template-panel" aria-label="Printable underside template">
-      <div class="template-settings"><p class="eyebrow">FROM SCREEN TO WORKBENCH</p><h2>A template with your name on it.</h2><p class="template-copy">The underside becomes a matching gauge, with your name cut through the plate as a stencil.</p><label class="field-label" for="template-name">STENCIL NAME</label><input id="template-name" class="name-input" value="My viol" maxlength="32" autocomplete="off" spellcheck="false"><p id="template-message" class="template-message" role="status" aria-live="polite"></p><button type="button" id="export-template" class="primary-button">Download underside template <span aria-hidden="true">↓</span></button><p class="template-hint">SVG · full size in mm · import and extrude to your preferred thickness, for example 3 mm.</p></div>
-      <div class="template-preview"><span class="eyebrow">SOLID PLATE · STENCIL CUT-OUTS</span><canvas id="template-canvas" role="img" aria-label="Underside gauge with the entered name cut through its body"></canvas></div>
-    </section>
-    <section class="export-bar"><div><h2>Just the fingerboard outline?</h2><p>Download the complete cross section as a full-scale SVG.</p></div><div class="export-actions"><button type="button" id="export-svg" class="secondary-button">Download outline SVG <span aria-hidden="true">↓</span></button></div></section>
     <details class="model-notes"><summary>About the curve &amp; the measurements <span aria-hidden="true">+</span></summary><div><p>The playing arc is made first with flat vertical sides. The underside is then carved up to meet those sides smoothly. Finally, a small circular rounding removes the sharp top corner. Set corner drop to zero to see the unsoftened corner. The rounding radius is calculated from the drop. The underside is completely independent of this finishing cut. The current construction preset retains a nominal flat side of 10% of the centre thickness before rounding.</p><p>The Meares overlays are digitized drawing outlines scaled to your chosen width. The presets are interpretations, not exact reproductions. The originals have no physical scale. The underside template follows the lower half of the curve, including the carved transitions into the sides, and adds a 20 mm backing band. The label is vector geometry with bridges through enclosed letter counters. Some combinations cannot form a convex profile with a flatter playing surface; adjust the controls if a message appears.</p><p>SVG dimensions are in millimetres. Print at 100% and check the width before using a template. The preview is scaled to fit your screen. All calculations and downloads happen on your device.</p></div></details>
   </main>
   <footer><span>FINGERBOARD STUDIO</span><span>Four dimensions. One continuous curve.</span><span>Runs entirely in your browser</span></footer>

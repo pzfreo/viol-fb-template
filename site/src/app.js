@@ -1,6 +1,5 @@
-import { DEFAULTS, PRESETS, validate, generate, exportSvg, construction, radiusForCornerDrop } from './profile.js';
+import { DEFAULTS, PRESETS, validate, generate, construction, radiusForCornerDrop } from './profile.js';
 import { REFERENCES } from './references.js';
-import { makeTemplate, exportTemplateSvg } from './template.js';
 import { fingerboardSections } from './fingerboard.js';
 import { makeTemplatePair, exportTemplatePairSvg } from './template-pair.js';
 import { parseOverstandExport } from './overstand.js';
@@ -16,7 +15,6 @@ let params = { ...DEFAULTS };
 let lastValid = generate(params);
 let cornerDrop = lastValid.edgeY-lastValid.corner.sideTopY;
 let selectedPreset = 'custom';
-let currentTemplate = null;
 let currentPair = null;
 let pairPreviewUrl = null;
 let profileValid = true;
@@ -117,7 +115,7 @@ $('export-pair').addEventListener('click',()=>{
 });
 function scheduleDraw() {
   cancelAnimationFrame(drawFrame);
-  drawFrame = requestAnimationFrame(() => { drawProfile(); drawTemplate(); });
+  drawFrame = requestAnimationFrame(drawProfile);
 }
 function update() {
   const result = validate(params);
@@ -127,7 +125,6 @@ function update() {
   $('validation').classList.toggle('error', !result.valid);
   $('drawing-tag').textContent = result.valid ? selectedPreset === 'custom' ? 'Custom profile' : selectedPreset === 'meares1' ? 'Meares 1 inspired' : 'Meares 2 inspired' : 'Last valid profile';
   $('drawing-tag').classList.toggle('invalid', !result.valid);
-  $('export-svg').disabled = !result.valid;
   for (const { key } of fields) {
     const metric = $(`metric-${key}`);
     if(metric){
@@ -136,26 +133,9 @@ function update() {
     }
     values[key].number.setAttribute('aria-invalid', String(!result.valid));
   }
-  updateTemplate();
   updateFingerboard();
   scheduleDraw();
 }
-function updateTemplate() {
-  try {
-    if (!profileValid) throw new RangeError('Resolve the profile dimensions before exporting a template.');
-    currentTemplate = makeTemplate(lastValid, $('template-name').value);
-    $('template-message').textContent = `${currentTemplate.width.toFixed(1)} × ${currentTemplate.height.toFixed(1)} mm plate · vector stencil lettering`;
-    $('template-message').classList.remove('error');
-    $('export-template').disabled = false;
-  } catch (error) {
-    currentTemplate = null;
-    $('template-message').textContent = error.message;
-    $('template-message').classList.add('error');
-    $('export-template').disabled = true;
-  }
-  scheduleDraw();
-}
-
 function canvasContext(id) {
   const canvas = $(id), bounds = canvas.getBoundingClientRect();
   const width = bounds.width, height = bounds.height;
@@ -221,22 +201,6 @@ function drawProfile() {
   }
   $('profile-canvas').setAttribute('aria-label', `${profileValid ? 'Current' : 'Last valid'} profile: width ${p.params.width} mm, crown radius ${p.params.radius} mm, maximum thickness ${p.params.thickness} mm, corner drop ${fieldValue('cornerDrop',p).toFixed(2)} mm.`);
 }
-function drawTemplate() {
-  const { ctx, width, height } = canvasContext('template-canvas');
-  if (!currentTemplate) {
-    ctx.fillStyle = '#72766d'; ctx.font = '12px Arial'; ctx.textAlign = 'center';
-    ctx.fillText('Adjust the dimensions or stencil name to preview.', width / 2, height / 2); return;
-  }
-  const template = currentTemplate;
-  const scale = Math.min((width - 24) / template.width, (height - 42) / template.height);
-  const transform = ([x,y]) => [width / 2 + x * scale, (height - template.height * scale) / 2 - 4 + y * scale];
-  ctx.beginPath(); tracePath(ctx, template.outer, transform);
-  for (const hole of template.holes) tracePath(ctx, hole, transform);
-  ctx.fillStyle = '#4f6557'; ctx.fill('evenodd');
-  ctx.fillStyle = '#72766d'; ctx.textAlign = 'center'; ctx.font = '9px Arial';
-  ctx.fillText('Matching underside edge', width / 2, height - 4);
-  $('template-canvas').setAttribute('aria-label', `Underside template named ${template.name}, plate width ${template.width} mm, height ${template.height.toFixed(2)} mm, with stencil lettering cut through.`);
-}
 function download(text, filename, type = 'image/svg+xml') {
   const url = URL.createObjectURL(new Blob([text], { type }));
   const a = document.createElement('a'); a.href = url; a.download = filename;
@@ -262,7 +226,6 @@ function updateReference() {
 }
 $('reference').addEventListener('change', updateReference);
 $('grid').addEventListener('change', scheduleDraw);
-$('template-name').addEventListener('input', updateTemplate);
 $('view-source').addEventListener('click', () => {
   const reference = $('reference').value;
   if (!REFERENCES[reference]) return;
@@ -272,13 +235,6 @@ $('view-source').addEventListener('click', () => {
 });
 $('close-dialog').addEventListener('click', () => $('source-dialog').close());
 $('source-dialog').addEventListener('click', event => { if (event.target === $('source-dialog')) $('source-dialog').close(); });
-$('export-svg').addEventListener('click', () => { if (profileValid) download(exportSvg(lastValid), 'viol-fingerboard-outline.svg'); });
-$('export-template').addEventListener('click', () => {
-  if (!currentTemplate || !profileValid) return;
-  const name = currentTemplate.name.replace(/[^A-Za-z0-9.-]+/g, '-').replace(/^-+|-+$/g, '') || 'viol';
-  download(exportTemplateSvg(currentTemplate), `${name}-underside-template.svg`);
-});
 const observer = new ResizeObserver(scheduleDraw);
 observer.observe($('profile-canvas').parentElement);
-observer.observe($('template-canvas').parentElement);
 syncControls(); update();
