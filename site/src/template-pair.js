@@ -10,7 +10,8 @@ export function makeSectionProfiles(dimensions, shared) {
       if(!section.onBoard)throw new RangeError('This fret is beyond the fingerboard end.');
       const thickness=dimensions[`thickness${section.fret}`];
       if(!Number.isFinite(thickness)||thickness<=0)throw new RangeError('Enter a positive maximum thickness.');
-      const params={width:section.width,radius:dimensions.topRadius??shared.radius,thickness};
+      const params={width:section.width,radius:dimensions.topRadius??shared.radius,thickness,
+        model:shared.model,exponent:shared.exponent,sideFraction:shared.sideFraction};
       params.blend=radiusForCornerDrop(dropRatio*thickness,params);
       const profile=generate(params);
       return {...section,profile};
@@ -38,5 +39,5 @@ export function exportTemplatePairSvg(pair) {
     const outlines=[template.outer,...template.holes].map(polygon=>polygon.map(([x,y])=>[x+offset[0],y+offset[1]]));
     return `<path fill="black" fill-rule="evenodd" stroke="none" d="${outlines.map(polygonPath).join(' ')}"/>`;
   }).join('\n');
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${pair.width}mm" height="${pair.height}mm" viewBox="0 0 ${pair.width} ${pair.height}">\n<title>Fret 1 and fret 7 underside templates</title>\n<desc>Two separate stencil plates at 1:1 millimetre scale, spaced 10 mm apart. Labels identify F1 and F7. Import as filled profiles and extrude to the required printing thickness.</desc>\n${paths}\n</svg>\n`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${pair.width}mm" height="${pair.height}mm" viewBox="0 0 ${pair.width} ${pair.height}">\n<title>Fret 1 and fret 7 underside templates</title>\n<desc>Two separate stencil plates at 1:1 millimetre scale, spaced 10 mm apart. Labels identify F1 and F7. Import as filled profiles and extrude to the required printing thickness. ${pair.sections.map(({fret,template})=>`F${fret}: corner rounding drops the edge ${template.cornerDrop.toFixed(2)} mm and leaves a ${template.flatSide.toFixed(2)} mm flat side`).join('; ')}. The contact edge follows that rounding, so these templates match only those amounts.</desc>\n${paths}\n</svg>\n`;
 }

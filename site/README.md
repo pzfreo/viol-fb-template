@@ -22,9 +22,15 @@ The repository's `.github/workflows/static.yml` runs the tests and build with No
 ## Review workflow
 
 1. Enter or import the taper and string measurements, then enter maximum thickness at frets 1 and 7.
-2. Review the actual sections using the F1/F7 tabs. Adjust corner drop on the selected section; the same drop/thickness ratio applies to both. Arrow keys, Home and End switch tabs from the keyboard.
+2. Review the actual sections using the F1/F7 tabs. Adjust corner rounding on the selected section; both sections round in proportion to their thickness. Arrow keys, Home and End switch tabs from the keyboard.
 3. Optionally download the selected section as a full-size outline SVG.
 4. Enter the stencil name, review the paired template preview, and download template SVG or 3MF.
+
+**Settle the corner rounding before you download.** The underside follows it, so a template taken
+at one rounding does not match the section at another. Change the rounding after downloading and
+the app says so, naming both values, until you download again or set it back. Every exported
+template records the rounding and flat side it was made for, in the SVG description and in the
+3MF metadata, so a printed plate can always be checked against the section it belongs to.
 
 The diagram is independent of stencil-name validation: a long or unsupported name blocks templates but still allows section review and outline download. Invalid section dimensions clear the diagram and disable geometry downloads rather than showing stale geometry.
 
@@ -35,29 +41,30 @@ The diagram is independent of stencil-name validation: a long or unsupported nam
 | Width W | Full physical width between the two side extrema. |
 | Crown radius R | Radius of the **fixed circular playing surface**. |
 | Maximum thickness T | Vertical separation from the crown to the underside centre. |
-| Corner drop D | Vertical distance from the original top corner down to where the rounding meets the side. Zero leaves a sharp corner. |
+| Corner rounding D | How far the top edge is filed down, in millimetres at the selected fret. Zero leaves a sharp corner. This is the only control over the section below the crown: the shaping stops 0.1 mm below wherever the file reaches. |
 
-Changing D leaves the entire underside carving unchanged. It trims only the top corner, joining the fixed playing circle to the flat side with a small circular fillet. The rounding radius is calculated internally from D; there is no separate radius control. The displayed drop is for the selected fret. Changing section thickness preserves the shared drop/thickness ratio. The retained playing surface stays on the same circle. Width and maximum thickness remain fixed.
-
-The crown is `(0, 0)` and the underside centre is `(0, -T)`. With `a = W/2`, the playing curve is:
+D is the single control over the section. The flat side left on the blank is derived from it:
 
 ```
-y_top(x) = sqrt(R² - x²) - R
+F = D + 0.1 mm
 ```
 
-The underside is a fixed quartic curve:
+so shaping always stops a hair below wherever the file will reach. Both Meares drawings already
+followed that rule — each leaves 0.10 mm of flat once its corner is eased — and deriving F this
+way reproduces both presets to within microns while matching the traces exactly as well.
 
-```
-h = 0.85 T + sqrt(R² - a²) - R
-u = x / a
-y_under(x) = -T + h (0.85 u² + 0.15 u⁴)
-```
+That makes D the whole story: the playing circle, width and maximum thickness stay fixed, and
+everything below the crown follows from D. The cost is that the underside template now moves
+with D, where it used to be independent of it. Physically that is the honest order: to know
+where to stop shaping you have to know how much you intend to file off. Generate the template
+after settling the rounding.
 
-The quartic proportions are a chosen design family, not a recovered historical construction rule. They leave room for the side blends while giving a deeper, noncircular underside. The presets are Meares-inspired interpretations; the overlays preserve the traced drawings, including their asymmetry. Overlays are scaled to equal width and aligned at the crown. No original physical dimensions are known.
+The 0.1 mm allowance is absolute, not a proportion, because it is a workshop constant rather
+than a design ratio. Scaled sections are therefore not exactly similar — F1 and F7 depart from
+exact similarity by at most that allowance, about 27 microns on the smaller section.
 
-The construction starts with vertical sides below the playing arc. A nominal flat side of `0.1 T` remains before corner rounding. This retained height is an explicit assumption, not a measurement recovered from the scans. The underside is carved up into the bottom of that wall with a quintic Bézier transition spanning `0.12 W`, matching tangent and curvature at the quartic and the straight wall (G2). The final circular corner fillet has tangent continuity (G1); its curvature changes at the joins.
-
-Validation rejects incomplete dimensions, insufficient underside depth, nonconvex carving transitions, and corner rounding that consumes the flat side. Bernstein bounds and recursive subdivision check the carving curvature. If a combination is invalid, the section preview asks for valid measurements and geometry downloads are disabled.
+`model: 'quartic'` keeps the earlier behaviour, including its fixed `0.1 T` flat side and its
+independence from D, for comparison.
 
 The [latest comparison](../analysis/latest-meares-overlay.png) uses a 4 mm corner radius for Meares 1, giving about 2.59 mm of corner drop and 0.10 mm of remaining flat wall at the assumed 60 mm width. This lowers the top corners while preserving the previously accepted underside. Meares 2 retains its 0.5 mm corner radius. These remain symmetric interpretations of asymmetric drawings.
 
@@ -65,7 +72,7 @@ The [latest comparison](../analysis/latest-meares-overlay.png) uses a 4 mm corne
 
 Enter nut width, end width, fingerboard length from the nut, vibrating string length, and maximum thickness at frets 1 and 7. The client uses Overstand's `calculateFretPositions` formula, read from the local `src-ts/geometry_engine.ts`: `x = L (1 - 2^(-n/12))`. With straight sides, `W(x) = W_nut + (W_end - W_nut) x / L_fb`. Frets beyond the board are rejected, not clamped or extrapolated.
 
-Both sections use one shared design; there is no drawing-to-fret assignment. Each uses its calculated width and independently entered thickness. Both sections use one fixed playing radius, taken from the explicit radius input or the shared profile when that input is blank. Thus `R_F1 = R_F7` and `D_section = D_shared T_section / T_shared`. Both review tabs use the same screen scale and crown alignment; the wider section shows more of the same playing circle. Thickness is never inferred from width. You can adjust the shared profile in the workshop below the paired-template form.
+Both sections use one shared design; there is no drawing-to-fret assignment. Each uses its calculated width and independently entered thickness. Both sections use one fixed playing radius, taken from the explicit radius input or the shared profile when that input is blank. Thus `R_F1 = R_F7` and `D_section = D_shared T_section / T_shared`. The 0.1 mm shaping allowance is not scaled with them, so the two sections are alike to within that allowance rather than exactly similar. Both review tabs use the same screen scale and crown alignment; the wider section shows more of the same playing circle. Thickness is never inferred from width. You can adjust the shared profile in the workshop below the paired-template form.
 
 **Import Overstand parameters** reads the `.json` parameter export entirely in the browser. It maps `fingerboard_width_at_nut`, `fingerboard_width_at_end`, `fingerboard_length`, `vsl`, `instrument_name` and optional `fingerboard_radius`. The last value sets the explicit playing radius for both sections. Import clears both maximum-thickness fields for the user to enter; visible-edge heights, Overstand blend percentage and derived board thicknesses are not substituted for them. Invalid files leave existing form values intact. The imported name stays editable, including when it must be shortened to fit the smaller stencil with its F1/F7 suffix.
 

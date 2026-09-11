@@ -50,6 +50,87 @@ The Meares 1 preset now lowers the top corners with a 4 mm rounding radius (abou
 
 The generator is a symmetric design family inspired by these references, not a deformation of the traced splines. The trace files remain measured reference shapes. The four dimensions still do not uniquely specify every possible outline: the underside's quartic proportions and the blend construction are explicit modeling choices, documented with the generator.
 
+## A single-equation alternative: the superellipse
+
+The generator's underside is a quartic in `x` over the central 76% of the width, with a
+quintic Bezier carrying it up into the flat sides. A curve written as `y = f(x)` has finite
+slope everywhere, so no polynomial can meet a vertical side tangentially; the second piece
+exists for that reason. A **superellipse** `(x/a)^n + (y/b)^n = 1` does reach `x = a` with a
+vertical tangent for any `n > 1`, so it can describe the underside and its side roll-over in
+one equation.
+
+Fitting `n`, `b` and the maximum-width height to the traced undersides, with `a` pinned to the
+traced half width, gives `n` near **1.67** for both drawings, and fits them better than the
+current construction:
+
+| Nearest-point RMS, source pixels | meares1 | meares2 |
+| --- | ---: | ---: |
+| Superellipse, maximum-width height free | 1.69 | 1.90 |
+| Superellipse, height pinned to the traced side datum | 2.10 | 3.00 |
+| Generator quartic + Bezier + flat side | 3.37 | 3.08 |
+
+The gain is almost entirely at the sides. Over the central 60% the two are comparable (1.40 vs
+1.52 on meares1; 2.10 vs 2.36 on meares2); outside it the superellipse is roughly twice as
+close (2.03 vs 4.93; 1.55 vs 3.89). This is consistent with the circle-fit results above: the
+central region is not where the models disagree.
+
+![Superellipse fitted to the traced undersides](superellipse-comparison.png)
+
+Three caveats before treating that free-fit `n = 1.67` as a result:
+
+1. The best fit puts the curve's maximum-width height **above** the traced widest point, by
+   1.26 mm (meares1) and 1.84 mm (meares2) at an assumed 60 mm width, so the trace stops short
+   of the vertical tangent. Pinning that height to the traced side datum is the honest
+   single-equation constraint and costs accuracy, dropping `n` to 1.57 and 1.52. On meares2 the
+   pinned fit is no better than the current construction.
+2. `n < 2` makes the second derivative unbounded at `x = 0`: curvature grows without limit at
+   the centreline instead of settling. It is small in physical terms — the radius is about
+   34 mm at 3 mm from the centre against the generator's 33 mm, tightening to roughly 20 mm at
+   0.6 mm and 9 mm at 0.06 mm — but the surface is not C2 there, unlike the present quartic.
+3. Both models are symmetric and both traces are not, so each pays the same asymmetry penalty.
+   These are in-sample fits to two drawings, not evidence of a construction rule.
+
+### What survives when it becomes a generator
+
+The generator's default underside **is now this superellipse**; the quartic remains reachable
+as `model: 'quartic'`. One equation and one exponent replace three curve pieces and six chosen
+constants, and the Bernstein convexity machinery goes with them, since a superellipse is convex
+for every `n > 1`.
+
+The decisive correction came from how the board is actually made. A rectangular blank is
+radiused on top; the underside is then worked down until it rises to meet the blank's original
+flat face; whatever flat is left is softened last with a file. So the flat side is **leftover
+stock**, not a design proportion, and it only has to outlast the corner drop. Sizing it that
+way instead of fixing it at `0.1 T` changes the result:
+
+| Nearest-point RMS, source pixels | meares1 | meares2 |
+| --- | ---: | ---: |
+| Superellipse, flat side sized to the corner drop, `n` 1.69 | **2.40** | **2.31** |
+| Quartic + Bezier + `0.1 T` flat side | 3.37 | 3.08 |
+
+Both drawings improve, and the gain is largest at the sides (4.93 to 2.89; 3.89 to 1.63) where
+the quartic needed its carving piece. A fixed `0.1 T` wall was forcing meares2 to carry 2.56 mm
+of flat it never wanted; sized to its 0.32 mm corner drop it needs 0.42 mm. Better still, the flat need not be a
+number at all. Both drawings leave 0.10 mm of flat once their corners are eased, so setting
+`F = D + 0.1 mm` derives it from the rounding and reproduces meares1 to 0.2 microns and meares2
+to 3.5 microns. The presets carry no flat-side number; the corner rounding is the only control
+over the section, and the pooled fit is unchanged at 2.31 px.
+
+The vertical meeting is the point. A curve written `y = f(x)` has finite slope everywhere, so
+no polynomial can arrive at the blank's vertical face; the quartic needed a separate blending
+Bezier purely to get there. The superellipse arrives vertically on its own, which is also what
+the wood does.
+
+Two costs are real and recorded in the tests. For `n < 2` curvature is unbounded at the centre
+*and* at the wall, where the quintic Bezier used to arrive at zero curvature (G2); the
+superellipse holds a vertical tangent there (G1) but its curvature diverges. Both singularities
+sit within a micron of the extremes, well below what a gouge, scraper or file resolves in wood.
+And `n` is a fitted dial, not a derived quantity: it ranges 1.52 to 1.84 depending on how the
+flat side is pinned, and the two drawings only agree closely once each is given its own wall.
+
+Reproduce with `.venv/bin/python scripts/fit_superellipse.py`; results are written to
+`superellipse-fit.json`.
+
 ## Method and accuracy
 
 1. Crop around each cross section, excluding the neighbouring longitudinal drawing. Interpret the left-hand outer surface in each original scan as the playing surface, consistent with its gentler curvature.
@@ -69,6 +150,7 @@ Ink thickness, doubled outlines, endpoint selection and possible scan distortion
 - `meares1-contour.csv`, `meares2-contour.csv`: 1,201 ordered points around each fitted closed outline, including the repeated endpoint.
 - `meares1-outline.svg`, `meares2-outline.svg`: sampled vector outlines. SVG coordinates use 1,000 units per source width; they are not millimetres. Smoothing may move the extrema slightly.
 - `meares1-spline.json`, `meares2-spline.json`: exact cubic spline knots and control coefficients, plus the source-coordinate transformation. Evaluate with SciPy `splev(t, (knots, np.array(coefficients).T, degree))`, for `0 <= t <= 1`.
+- `superellipse-comparison.png`, `superellipse-comparison.svg`, `superellipse-fit.json`: single-equation superellipse fits to the traced undersides, compared with the generator.
 - `measurements.json`: full numeric measurements and circle/spline fit diagnostics.
 - PNG and SVG comparison figures: source overlays, normalized comparison, and side enlargements.
 

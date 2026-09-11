@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fretDistance, fingerboardSections, scaleSection } from '../src/fingerboard.js';
-import { generate, PRESETS } from '../src/profile.js';
+import { generate, PRESETS, SHAPING_MARGIN, flatSide } from '../src/profile.js';
 const near=(a,b)=>assert.ok(Math.abs(a-b)<1e-9,`${a} != ${b}`);
 const dimensions={nutWidth:30,endWidth:60,boardLength:400,stringLength:600};
 
@@ -34,6 +34,14 @@ test('shared profile scales consistently at both sections, including corner drop
     const p=generate(parameters),scale=s.width/base.params.width;
     near(p.params.width,s.width);
     near(p.edgeY-p.corner.sideTopY,(base.edgeY-base.corner.sideTopY)*scale);
-    p.points.forEach(([x,y],i)=>{near(x,base.points[i][0]*scale);near(y,base.points[i][1]*scale);});
+    // The filing allowance is a workshop constant, not a proportion, so a
+    // smaller section keeps the same 0.1 mm of flat rather than a scaled share.
+    // Similarity therefore holds everywhere except by that fixed amount.
+    near(p.flatSideHeight,SHAPING_MARGIN);
+    near(flatSide(p.params),(p.edgeY-p.corner.sideTopY)+SHAPING_MARGIN);
+    p.points.forEach(([x,y],i)=>{
+      assert.ok(Math.hypot(x-base.points[i][0]*scale,y-base.points[i][1]*scale)<=SHAPING_MARGIN,
+        'departs from exact similarity by no more than the filing allowance');
+    });
   }
 });

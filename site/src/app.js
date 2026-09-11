@@ -15,6 +15,9 @@ let currentPair = null;
 let pairPreviewUrl = null;
 let profileValid = false;
 let drawFrame = 0;
+// The underside now follows the corner rounding, so a template downloaded at one
+// rounding no longer matches the section at another. Remember what was taken.
+let downloadedRounding = null;
 const dimensionKeys=['nutWidth','endWidth','boardLength','stringLength','thickness1','thickness7'];
 function fieldValue(key, profile) {
   return key==='cornerDrop'?profile.edgeY-profile.corner.sideTopY:profile.params[key];
@@ -25,6 +28,9 @@ function readDimensions() {
   return dimensions;
 }
 function selectedThickness() {return Number($(`thickness${selectedFret}`).value);}
+// Millimetres again. The shaping now stops a fixed hair below wherever the file
+// reaches, so there is no per-design ceiling for the control to run into.
+const CORNER_ROUNDING_MAX = 6;
 function syncControls() {
   if(!Number.isFinite(params.blend))return;
   const geometry=construction(params),ratio=(geometry.edgeY-geometry.corner.sideTopY)/params.thickness;
@@ -61,7 +67,7 @@ for(const fret of [1,7]){
 }
 $('export-outline').addEventListener('click',()=>{
   if(!lastValid||!profileValid)return;
-  download(exportSvg(lastValid),`${downloadName()}-F${selectedFret}-outline.svg`);
+  download(exportSvg(lastValid),`${downloadName()}-F${selectedFret}-outline.svg`);recordDownload();refreshStaleWarning();
 });
 function downloadName(){return $('pair-name').value.trim().replace(/[^A-Za-z0-9.-]+/g,'-').replace(/^-+|-+$/g,'')||'Viol';}
 function updateFingerboard(){update();}
@@ -112,17 +118,17 @@ function update(preserveCornerInput=false) {
   const thickness=selectedThickness(),hasThickness=Number.isFinite(thickness)&&thickness>0;
   $('cornerDrop-number').disabled=!hasThickness;$('cornerDrop-slider').disabled=!hasThickness;
   $('cornerDrop-number').setAttribute('aria-invalid',String(!empty&&!profileValid));
-  $('cornerDrop-slider').max=hasThickness?thickness*.1:4;
-  $('cornerDrop-max').textContent=`${(hasThickness?thickness*.1:4).toFixed(2)} mm`;
+  $('cornerDrop-slider').max=CORNER_ROUNDING_MAX;
+  $('cornerDrop-max').textContent=`${CORNER_ROUNDING_MAX.toFixed(2)} mm`;
   if(!preserveCornerInput)syncControls();
-  updatePrintSettings();scheduleDraw();
+  updatePrintSettings();refreshStaleWarning();scheduleDraw();
 }
 function updatePrintSettings() {
   try {
     validatePrintThickness(Number($('print-thickness').value));
     $('print-thickness').setAttribute('aria-invalid','false');
     $('export-3mf').disabled=!currentPair;
-    $('print-message').textContent='3MF: two separate solid plates, ready to open in your slicer. SVG: the same flat outlines. Both include the F1 / F7 stencil names.';
+    $('print-message').textContent='3MF: two separate solid plates, ready to open in your slicer. SVG: the same flat outlines. Both include the F1 / F7 stencil names, and both record the corner rounding they were made for.';
   } catch(error){
     $('print-thickness').setAttribute('aria-invalid','true');$('export-3mf').disabled=true;
     $('print-message').textContent=error.message;
@@ -135,7 +141,7 @@ $('export-3mf').addEventListener('click',()=>{
     const thickness=Number($('print-thickness').value);
     const data=exportTemplatePair3mf(currentPair,thickness);
     const name=$('pair-name').value.trim().replace(/[^A-Za-z0-9.-]+/g,'-').replace(/^-+|-+$/g,'')||'Viol';
-    download(data,`${name}-F1-F7-${thickness}mm.3mf`,'model/3mf');
+    download(data,`${name}-F1-F7-${thickness}mm.3mf`,'model/3mf');recordDownload();refreshStaleWarning();
   } catch(error){$('print-message').textContent=error.message;}
 });
 for(const key of ['nutWidth','endWidth','boardLength','stringLength','thickness1','thickness7','pair-name','pair-radius'])$(key).addEventListener('input',updateFingerboard);
@@ -160,7 +166,7 @@ $('overstand-file').addEventListener('change',async()=>{
 $('export-pair').addEventListener('click',()=>{
   if(!currentPair)return;
   const name=$('pair-name').value.trim().replace(/[^A-Za-z0-9.-]+/g,'-').replace(/^-+|-+$/g,'')||'Viol';
-  download(exportTemplatePairSvg(currentPair),`${name}-F1-F7-underside-templates.svg`);
+  download(exportTemplatePairSvg(currentPair),`${name}-F1-F7-underside-templates.svg`);recordDownload();refreshStaleWarning();
 });
 function scheduleDraw() {
   cancelAnimationFrame(drawFrame);
@@ -240,6 +246,18 @@ function drawProfile() {
     ctx.textAlign = 'left'; ctx.fillStyle = '#a65435'; ctx.font = 'italic 12px Georgia'; ctx.fillText(`D ${fieldValue('cornerDrop',p).toFixed(2)}`, cornerX + 8, cornerY - 20);
   }
   $('profile-canvas').setAttribute('aria-label', `Fret ${selectedFret} profile: width ${p.params.width} mm, crown radius ${p.params.radius} mm, maximum thickness ${p.params.thickness} mm, corner drop ${fieldValue('cornerDrop',p).toFixed(2)} mm.`);
+}
+function recordDownload() {
+  if(lastValid)downloadedRounding={drop:fieldValue('cornerDrop',lastValid),name:downloadName()};
+}
+function refreshStaleWarning() {
+  const warning=$('stale-warning');
+  const drop=lastValid?fieldValue('cornerDrop',lastValid):null;
+  const stale=downloadedRounding&&drop!==null&&Math.abs(drop-downloadedRounding.drop)>1e-6;
+  warning.hidden=!stale;
+  if(stale)warning.textContent=`Corner rounding has changed to ${drop.toFixed(2)} mm since you downloaded at `
+    +`${downloadedRounding.drop.toFixed(2)} mm. The template edge follows the rounding, so those files no longer `
+    +`match this section. Download again before cutting or printing.`;
 }
 function download(text, filename, type = 'image/svg+xml') {
   const url = URL.createObjectURL(new Blob([text], { type }));

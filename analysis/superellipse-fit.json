@@ -1,0 +1,98 @@
+{
+  "meares1": {
+    "fitted": {
+      "exponent_n": 1.6674449606394806,
+      "depth_b_over_width": 0.3028498396588351,
+      "y_side_over_width": 0.012864930875566543,
+      "half_width_a_over_width": 0.5,
+      "side_overshoot_mm_at_60mm_width": 1.2557464374713676
+    },
+    "fitted_side_pinned": {
+      "exponent_n": 1.565648672636183,
+      "depth_b_over_width": 0.28465503243455414,
+      "y_side_over_width": -0.008064176415622917,
+      "half_width_a_over_width": 0.5
+    },
+    "nearest_point_rms": {
+      "superellipse": {
+        "rms_px": 1.6896803052249574,
+        "rms_px_central_60": 1.4018293754799669,
+        "rms_px_outer": 2.0294503992096993,
+        "max_px": 3.695456661044582
+      },
+      "superellipse_side_pinned": {
+        "rms_px": 2.095837797220132,
+        "rms_px_central_60": 1.9073621476200755,
+        "rms_px_outer": 2.337505974446681,
+        "max_px": 4.941988521528131
+      },
+      "generator_superellipse_model": {
+        "rms_px": 2.4028142441286033,
+        "rms_px_central_60": 1.986906289680276,
+        "rms_px_outer": 2.8924104564335984,
+        "max_px": 6.05356871128857
+      },
+      "generator": {
+        "rms_px": 3.374082384621918,
+        "rms_px_central_60": 1.5182763212440686,
+        "rms_px_outer": 4.927168948597048,
+        "max_px": 8.792340767338658
+      }
+    },
+    "centre_curvature_radius_mm_at_60mm_width": {
+      "0.06mm_from_centre": 9.394904646215101,
+      "0.6mm_from_centre": 20.20446782946865,
+      "3.0mm_from_centre": 34.5059042799839,
+      "9.0mm_from_centre": 49.72359161426564
+    },
+    "note": "Symmetric models measured against an asymmetric trace; both pay that penalty equally."
+  },
+  "meares2": {
+    "fitted": {
+      "exponent_n": 1.6677541429554987,
+      "depth_b_over_width": 0.30746244022781316,
+      "y_side_over_width": 0.0233278384566774,
+      "half_width_a_over_width": 0.5,
+      "side_overshoot_mm_at_60mm_width": 1.8390478430020682
+    },
+    "fitted_side_pinned": {
+      "exponent_n": 1.5211786823316584,
+      "depth_b_over_width": 0.2808141326708273,
+      "y_side_over_width": -0.007322958926690403,
+      "half_width_a_over_width": 0.5
+    },
+    "nearest_point_rms": {
+      "superellipse": {
+        "rms_px": 1.8968784613046912,
+        "rms_px_central_60": 2.1029593571147323,
+        "rms_px_outer": 1.5543301681837156,
+        "max_px": 4.634948225099192
+      },
+      "superellipse_side_pinned": {
+        "rms_px": 2.9971793022331155,
+        "rms_px_central_60": 3.012120896965153,
+        "rms_px_outer": 2.9756189469500898,
+        "max_px": 6.067988461984617
+      },
+      "generator_superellipse_model": {
+        "rms_px": 2.312299486736,
+        "rms_px_central_60": 2.69013505581584,
+        "rms_px_outer": 1.62355501789821,
+        "max_px": 5.344193518996198
+      },
+      "generator": {
+        "rms_px": 3.084322523825784,
+        "rms_px_central_60": 2.360385411046608,
+        "rms_px_outer": 3.8943763473839392,
+        "max_px": 8.432940209740613
+      }
+    },
+    "centre_curvature_radius_mm_at_60mm_width": {
+      "0.06mm_from_centre": 9.267465883245924,
+      "0.6mm_from_centre": 19.91621715653829,
+      "3.0mm_from_centre": 33.99669829462633,
+      "9.0mm_from_centre": 48.97317955946295
+    },
+    "note": "Symmetric models measured against an asymmetric trace; both pay that penalty equally."
+  }
+}
