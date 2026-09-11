@@ -90,9 +90,38 @@ Three caveats before treating `n = 1.67` as a result:
 3. Both models are symmetric and both traces are not, so each pays the same asymmetry penalty.
    These are in-sample fits to two drawings, not evidence of a construction rule.
 
+### What survives when it becomes a generator
+
+A **prototype** `model: 'superellipse'` now exists in `site/src/profile.js` alongside the
+shipped quartic, which remains the default. It replaces the quartic, the quintic carving
+Bezier and four of their six constants with one equation and one exponent; the convexity
+machinery goes too, since a superellipse is convex for every `n > 1`.
+
+Held to a single shared parameterisation, its advantage over the quartic disappears:
+
+| Pooled nearest-point RMS, source pixels | value |
+| --- | ---: |
+| Per-drawing free fit (3 parameters each) | 1.80 |
+| Joint fit, shared `n` and flat side (`n` 1.74, fraction 0.019) | 3.14 |
+| Shipped quartic | 3.23 |
+| Prototype defaults (`n` 1.6, fraction 0.1) | 4.15 |
+
+The two drawings disagree about the wall: meares1 is fitted best by a flat side near
+`0.06 T`, meares2 by one near `0.008 T`. No single pair of values serves both, so the earlier
+free-fit numbers are a measure of what three per-drawing parameters can do, not of a shared
+design family. **Against these two traces the superellipse is at best a tie with the quartic.**
+
+The prototype therefore ships as a drop-in swap, keeping the `0.1 T` wall so corner drop is
+unchanged and every preset stays valid, with `exponent` and `sideFraction` exposed for
+experimentation. The trace-optimal setting leaves about 0.5 mm of wall, which caps the corner
+drop the fillet can cut.
+
+It also costs smoothness the quartic has. For `n < 2` the curvature is unbounded at the centre
+*and* at the wall, where the quintic Bezier currently arrives at zero curvature (G2). The
+superellipse meets the wall with a vertical tangent, so G1 holds, but curvature jumps.
+
 Reproduce with `.venv/bin/python scripts/fit_superellipse.py`; results are written to
-`superellipse-fit.json`. This is exploratory analysis. Nothing here feeds the generator, whose
-underside remains the quartic documented with the app.
+`superellipse-fit.json`. The generator's default underside is unchanged.
 
 ## Method and accuracy
 

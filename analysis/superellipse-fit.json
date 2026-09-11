@@ -26,6 +26,12 @@
         "rms_px_outer": 2.337505974446681,
         "max_px": 4.941988521528131
       },
+      "generator_superellipse_model": {
+        "rms_px": 3.6079388851107868,
+        "rms_px_central_60": 4.041462366606124,
+        "rms_px_outer": 2.8823993496140923,
+        "max_px": 6.887223210053583
+      },
       "generator": {
         "rms_px": 3.374082384621918,
         "rms_px_central_60": 1.5182763212440686,
@@ -67,6 +73,12 @@
         "rms_px_central_60": 3.012120896965153,
         "rms_px_outer": 2.9756189469500898,
         "max_px": 6.067988461984617
+      },
+      "generator_superellipse_model": {
+        "rms_px": 4.592995917256682,
+        "rms_px_central_60": 3.046859807775633,
+        "rms_px_outer": 6.1674041986140615,
+        "max_px": 9.794334025025776
       },
       "generator": {
         "rms_px": 3.084322523825784,

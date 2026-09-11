@@ -15,7 +15,9 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 ROOT=Path(__file__).resolve().parents[1]
 MODEL='#b24f2b';TRACE='#287a89';SUPER='#6b3fa0'
-program="import {generate,PRESETS} from './site/src/profile.js'; console.log(JSON.stringify(Object.fromEntries(Object.entries(PRESETS).map(([n,p])=>[n,generate(p)]))));"
+program=("import {generate,PRESETS} from './site/src/profile.js';"
+  "console.log(JSON.stringify(Object.fromEntries(Object.entries(PRESETS).flatMap(([n,p])=>"
+  "[[n,generate(p)],[n+':superellipse',generate({...p,model:'superellipse'})]]))));")
 profiles=json.loads(subprocess.check_output(['node','--input-type=module','-e',program],cwd=ROOT,text=True))
 measurements=json.loads((ROOT/'analysis'/'measurements.json').read_text())
 
@@ -34,7 +36,7 @@ def nearest(points,curve):
 
 report={}
 fig,axes=plt.subplots(3,3,figsize=(14,12))
-for row,name in enumerate(profiles):
+for row,name in enumerate(n for n in profiles if ':' not in n):
     rows=list(csv.DictReader((ROOT/'analysis'/f'{name}-trace.csv').open()))
     x=np.array([float(r['x_over_width']) for r in rows])
     top=np.array([float(r['top_y_over_width']) for r in rows])
@@ -60,9 +62,12 @@ for row,name in enumerate(profiles):
     pinned=superellipse(.5,pin.x[0],datum,pin.x[1])
     profile=profiles[name]
     model=np.array(profile['underside'])/profile['params']['width']+[0,rise]
+    built=profiles[f'{name}:superellipse']
+    implemented=np.array(built['underside'])/built['params']['width']+[0,rise]
     inner=np.abs(points[:,0])<=.3
     stats={}
-    for label,candidate in [('superellipse',curve),('superellipse_side_pinned',pinned),('generator',model)]:
+    for label,candidate in [('superellipse',curve),('superellipse_side_pinned',pinned),
+                            ('generator_superellipse_model',implemented),('generator',model)]:
         d=nearest(points,candidate)*px
         stats[label]={'rms_px':float(np.sqrt((d**2).mean())),
                       'rms_px_central_60':float(np.sqrt((d[inner]**2).mean())),
@@ -83,6 +88,7 @@ for row,name in enumerate(profiles):
         ax.plot(curve[:,0],curve[:,1],color=SUPER,lw=1.8,label=f'Superellipse n={n:.2f}')
         ax.plot(pinned[:,0],pinned[:,1],color=SUPER,lw=1.3,ls=':',label=f'Superellipse n={pin.x[1]:.2f}, side pinned')
         ax.plot(model[:,0],model[:,1],color=MODEL,lw=1.6,ls=(0,(5,2)),label='Generator quartic + Bezier')
+        ax.plot(implemented[:,0],implemented[:,1],color='#1b7f4b',lw=1.6,ls=(0,(2,2)),label='Generator superellipse model')
         ax.set(xlim=xlim,ylim=ylim);ax.set_aspect('equal');ax.grid(alpha=.18)
         ax.spines[['top','right']].set_visible(False)
         ax.set_title(f'{name} · {title}',loc='left',fontsize=11)
@@ -105,7 +111,9 @@ for row,name in enumerate(profiles):
     ax.axhline(stats['generator']['rms_px'],color=MODEL,ls=(0,(5,2)),lw=1.4)
     ax.annotate(f'best n={n:.2f}',(n,min(sweep)),textcoords='offset points',xytext=(8,26),color=SUPER,fontsize=9)
     ax.annotate('n=2 (ellipse)',(2,max(sweep)*.72),textcoords='offset points',xytext=(6,0),color='#666',fontsize=9)
-    ax.annotate('generator',(4.4,stats['generator']['rms_px']),textcoords='offset points',xytext=(-6,6),color=MODEL,fontsize=9,ha='right')
+    ax.annotate('generator quartic',(4.9,stats['generator']['rms_px']),textcoords='offset points',xytext=(-6,6),color=MODEL,fontsize=9,ha='right')
+    ax.axhline(stats['generator_superellipse_model']['rms_px'],color='#1b7f4b',ls=(0,(2,2)),lw=1.4)
+    ax.annotate('generator superellipse',(4.9,stats['generator_superellipse_model']['rms_px']),textcoords='offset points',xytext=(-6,-14),color='#1b7f4b',fontsize=9,ha='right')
     ax.set(xlabel='Superellipse exponent n',ylabel='Nearest-point RMS, source pixels',title=f'{name} · fit quality against n')
     ax.grid(alpha=.18);ax.spines[['top','right']].set_visible(False)
 

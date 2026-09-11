@@ -6,6 +6,46 @@ export const PRESETS = Object.freeze({
   meares1: { width: 60, radius: 70.25, thickness: 26.87, blend: 4 },
   meares2: { width: 60, radius: 69.38, thickness: 25.55, blend: .5 },
 });
+// The retained vertical wall, shared by both underside models. The corner
+// fillet is cut out of this wall, so it must survive the chosen corner drop.
+export const FLAT_SIDE_FRACTION = .1;
+/** Underside model. 'quartic' is the shipped construction: a quartic in x over
+ * the central span plus a G2 quintic Bezier carving up into the wall, needing
+ * six chosen constants. The prototype 'superellipse' replaces both curves with
+ * (x/a)^n + (y/b)^n = 1, which reaches the wall with a vertical tangent, so no
+ * carving piece exists and only the exponent is chosen.
+ *
+ * These defaults are a drop-in swap: the same flat side as the quartic, so
+ * corner drop behaves identically and every preset stays valid. 1.6 is the
+ * joint least-squares fit to both traces AT that flat side. The traces
+ * themselves prefer a thinner wall -- their joint optimum is n 1.74 with
+ * sideFraction 0.019 -- but that leaves about 0.5 mm of wall for the fillet to
+ * cut from. Pass exponent and sideFraction to explore; see
+ * analysis/superellipse-fit.json. Both are tuning dials, not derived values.
+ */
+export const UNDERSIDE_MODELS = Object.freeze(['quartic','superellipse']);
+export const SUPERELLIPSE_EXPONENT = 1.6;
+export const SUPERELLIPSE_SIDE_FRACTION = FLAT_SIDE_FRACTION;
+const modelOf = params => params.model ?? 'quartic';
+const exponentOf = params => params.exponent ?? SUPERELLIPSE_EXPONENT;
+const sideFractionOf = params => modelOf(params)==='superellipse'
+  ? params.sideFraction ?? SUPERELLIPSE_SIDE_FRACTION : FLAT_SIDE_FRACTION;
+
+// Half-depth of the superellipse: it spans from the underside centre at -T up
+// to the foot of the wall, which it meets with a vertical tangent.
+function superellipse(params) {
+  const a=params.width/2;
+  const sideY=surface(a,params).y-sideFractionOf(params)*params.thickness;
+  return {a,sideY,depth:sideY+params.thickness,n:exponentOf(params)};
+}
+/** Right half of the superellipse, parametrised from the wall (t=0) to the
+ * centre (t=1). Parametric sampling reaches the vertical tangent exactly; the
+ * y = f(x) form cannot, because its slope diverges there.
+ */
+export function superellipsePoint(params,t) {
+  const {a,sideY,depth,n}=superellipse(params), angle=t*Math.PI/2;
+  return [a*Math.cos(angle)**(2/n), sideY-depth*Math.sin(angle)**(2/n)];
+}
 const add = (a,b) => a.map((v,i)=>v+b[i]);
 const mul = (p,k) => p.map(v=>v*k);
 const cross = (a,b) => a[0]*b[1]-a[1]*b[0];
@@ -25,6 +65,13 @@ export function surface(x, params, underside = false) {
     return { y: root - params.radius, first: -x/root, second: -(params.radius**2)/root**3 };
   }
   // These coefficients depend on W, R and T only. Blend NEVER enters this curve.
+  if (modelOf(params) === 'superellipse') {
+    const {sideY,depth,n}=superellipse(params), u=Math.abs(x)/a, s=1-u**n;
+    // d/du (1-u^n)^(1/n) = -u^(n-1) (1-u^n)^(1/n-1); the sign follows x.
+    return { y: sideY-depth*s**(1/n),
+      first: Math.sign(x)*depth*u**(n-1)*s**(1/n-1)/a,
+      second: depth*(n-1)*(u**(n-2)*s**(1/n-1)+u**(2*n-2)*s**(1/n-2))/(a*a) };
+  }
   const h = .85 * params.thickness + Math.sqrt(params.radius**2-a*a) - params.radius;
   const u = x/a;
   return { y: -params.thickness + h*(.85*u*u+.15*u**4),
@@ -52,13 +99,17 @@ export function construction(params) {
   const edgeY=surface(a,params).y;
   // A short remnant of the original flat side. This chosen 10% proportion is
   // independent of corner easing, and is documented as a construction preset.
-  const sideY=edgeY-.1*thickness;
-  const span=.12*width, underJoinX=a-span;
-  const bottom=surface(underJoinX,params,true);
-  const length=1.2*span, vertical=.7*(sideY-bottom.y);
+  const sideY=edgeY-sideFractionOf(params)*thickness;
+  // The superellipse already arrives at the wall vertically, so it needs no
+  // carving piece and joins at the full half width instead of short of it.
+  const superellipseModel=modelOf(params)==='superellipse';
+  const span=.12*width, underJoinX=superellipseModel?a:a-span;
+  const bottom=superellipseModel?null:surface(underJoinX,params,true);
+  const length=1.2*span, vertical=superellipseModel?null:.7*(sideY-bottom.y);
   // Carve from the underside up to the vertical side. Zero curvature at the
   // side end gives a smooth meeting with the straight wall.
-  const carveBlend=hermite([a,sideY],[underJoinX,bottom.y],[0,-vertical],
+  const carveBlend=superellipseModel?null
+    :hermite([a,sideY],[underJoinX,bottom.y],[0,-vertical],
     [-length,-length*bottom.first],[0,0],[0,bottom.second*length*length]);
   let corner={radius:0,center:[a,edgeY],angle:0,joinX:a,sideTopY:edgeY};
   if(blend>0){
@@ -105,6 +156,21 @@ export function validate(params) {
     return {valid:false,message:'The playing-surface radius must be greater than half the fingerboard width.'};
   if(params.blend>=params.width/2)
     return {valid:false,message:'Reduce corner drop to fit the top edge.'};
+  if(!UNDERSIDE_MODELS.includes(modelOf(params)))
+    return {valid:false,message:'Choose a supported underside model.'};
+  if(modelOf(params)==='superellipse'){
+    // Convexity needs no checking here: a superellipse is convex for every n>1.
+    if(!(exponentOf(params)>1)||!Number.isFinite(exponentOf(params)))
+      return {valid:false,message:'The superellipse exponent must be greater than 1.'};
+    if(!(sideFractionOf(params)>=0)||!Number.isFinite(sideFractionOf(params)))
+      return {valid:false,message:'The flat-side fraction must be zero or more.'};
+    const geometry=construction(params);
+    if(!(superellipse(params).depth>0))
+      return {valid:false,message:'Increase thickness or crown radius to leave depth below the flat sides.'};
+    if(geometry.flatSideHeight<=1e-8)
+      return {valid:false,message:'This drop removes the whole flat side. Use a smaller corner drop.'};
+    return {valid:true,message:params.blend===0?'Superellipse underside · sharp top corners':'Superellipse underside · lightly rounded top corners',geometry};
+  }
   const under=surface(0,params,true);
   if(under.second<=1/params.radius)
     return {valid:false,message:'Increase thickness or crown radius to give the underside a stronger curve than the playing surface.'};
@@ -127,14 +193,18 @@ export function generate(params,samples=1200) {
   });
   const cornerPoints=corner.radius>0?Array.from({length:Math.max(16,Math.ceil(count/4))},(_,i)=>
     cornerPoint(corner,(i+1)/Math.max(16,Math.ceil(count/4)))):[];
-  const carved=Array.from({length:count},(_,i)=>bezier(carveBlend,(i+1)/count));
-  const bottomCore=Array.from({length:count},(_,i)=>{
-    const x=underJoinX*(1-(i+1)/count);return [x,surface(x,params,true).y];
-  });
+  // One equation replaces the carving piece and the quartic core alike, so the
+  // superellipse contributes a single run of points from the wall to the centre.
+  const lower=modelOf(params)==='superellipse'
+    ? Array.from({length:2*count},(_,i)=>superellipsePoint(params,(i+1)/(2*count)))
+    : [...Array.from({length:count},(_,i)=>bezier(carveBlend,(i+1)/count)),
+       ...Array.from({length:count},(_,i)=>{
+         const x=underJoinX*(1-(i+1)/count);return [x,surface(x,params,true).y];
+       })];
   const sideBottom=[params.width/2,sideY];
-  const right=[...topCore,...cornerPoints,sideBottom,...carved,...bottomCore];
+  const right=[...topCore,...cornerPoints,sideBottom,...lower];
   const points=[...right,...right.slice(0,-1).reverse().map(([x,y])=>[-x,y])];
-  const lowerRight=[sideBottom,...carved,...bottomCore];
+  const lowerRight=[sideBottom,...lower];
   const underside=[...lowerRight,...lowerRight.slice(0,-1).reverse().map(([x,y])=>[-x,y])];
   return {params:{...params},points,underside,top:0,bottom:-params.thickness,
     ...result.geometry,joinX:corner.joinX,cornerMidpoint:cornerPoint(corner,.5)};
