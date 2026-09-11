@@ -25,20 +25,27 @@ function readDimensions() {
   return dimensions;
 }
 function selectedThickness() {return Number($(`thickness${selectedFret}`).value);}
+// The flat side left on the blank, in millimetres, for the shared design. The
+// control is a share of this rather than an absolute drop: how much flat a
+// design leaves varies, so millimetres made most of the slider dead for some
+// presets. The share is thickness-free, so it carries to both frets unchanged.
+function sharedFlatSide() {
+  const geometry=construction(params);
+  return geometry.edgeY-geometry.sideY;
+}
 function syncControls() {
   if(!Number.isFinite(params.blend))return;
-  const geometry=construction(params),ratio=(geometry.edgeY-geometry.corner.sideTopY)/params.thickness;
-  const thickness=selectedThickness(),value=ratio*thickness;
-  if(Number.isFinite(value)){
-    $('cornerDrop-number').value=Number(value.toFixed(4));$('cornerDrop-slider').value=value;
+  const geometry=construction(params),flat=sharedFlatSide();
+  const percent=(geometry.edgeY-geometry.corner.sideTopY)/flat*100;
+  if(Number.isFinite(percent)){
+    $('cornerDrop-number').value=Number(percent.toFixed(2));$('cornerDrop-slider').value=percent;
   }
 }
 for(const id of ['cornerDrop-number','cornerDrop-slider'])$(id).addEventListener('input',event=>{
-  const thickness=selectedThickness();
-  const value=event.target.value===''?NaN:Number(event.target.value);
-  params.blend=radiusForCornerDrop(value*params.thickness/thickness,params);
-  if(id==='cornerDrop-slider')$('cornerDrop-number').value=value;
-  else if(Number.isFinite(value))$('cornerDrop-slider').value=value;
+  const percent=event.target.value===''?NaN:Number(event.target.value);
+  params.blend=radiusForCornerDrop(percent/100*sharedFlatSide(),params);
+  if(id==='cornerDrop-slider')$('cornerDrop-number').value=percent;
+  else if(Number.isFinite(percent))$('cornerDrop-slider').value=percent;
   selectedPreset='custom';$('preset').value='custom';
   update(true);
 });
@@ -112,8 +119,9 @@ function update(preserveCornerInput=false) {
   const thickness=selectedThickness(),hasThickness=Number.isFinite(thickness)&&thickness>0;
   $('cornerDrop-number').disabled=!hasThickness;$('cornerDrop-slider').disabled=!hasThickness;
   $('cornerDrop-number').setAttribute('aria-invalid',String(!empty&&!profileValid));
-  $('cornerDrop-slider').max=hasThickness?thickness*.1:4;
-  $('cornerDrop-max').textContent=`${(hasThickness?thickness*.1:4).toFixed(2)} mm`;
+  $('cornerDrop-slider').max=100; // a share of the flat side, so always the full range
+  const fullFlat=hasThickness?sharedFlatSide()*thickness/params.thickness:NaN;
+  $('cornerDrop-max').textContent=Number.isFinite(fullFlat)?`100% · ${fullFlat.toFixed(2)} mm`:'100%';
   if(!preserveCornerInput)syncControls();
   updatePrintSettings();scheduleDraw();
 }
