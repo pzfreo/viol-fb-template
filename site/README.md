@@ -35,36 +35,30 @@ The diagram is independent of stencil-name validation: a long or unsupported nam
 | Width W | Full physical width between the two side extrema. |
 | Crown radius R | Radius of the **fixed circular playing surface**. |
 | Maximum thickness T | Vertical separation from the crown to the underside centre. |
-| Corner rounding D | Share of the flat side left on the blank that gets filed away, as a percentage. Zero leaves a sharp corner; 100% would remove the whole flat and is rejected. The resulting drop in millimetres is shown with the section measurements. |
+| Corner rounding D | How far the top edge is filed down, in millimetres at the selected fret. Zero leaves a sharp corner. This is the only control over the section below the crown: the shaping stops 0.1 mm below wherever the file reaches. |
 
-Changing D leaves the entire underside unchanged. It trims only the top corner, joining the fixed playing circle to the flat side with a small circular fillet. The rounding radius is calculated internally from D; there is no separate radius control. The retained playing surface stays on the same circle. Width and maximum thickness remain fixed.
-
-D is a **percentage of the available flat side**, not a distance. How much flat a design leaves depends on its `sideFraction` and thickness, so an absolute millimetre control left most of its range unusable on designs with a thin wall — Meares 2 leaves 0.42 mm where Meares 1 leaves 2.69 mm. As a share, the full 0–99% range is usable on every design, and the millimetre equivalent for the selected fret is shown beside the slider and in the section measurements.
-
-The crown is `(0, 0)` and the underside centre is `(0, -T)`. With `a = W/2`, the playing curve is:
+D is the single control over the section. The flat side left on the blank is derived from it:
 
 ```
-y_top(x) = sqrt(R² - x²) - R
+F = D + 0.1 mm
 ```
 
-The underside is a single superellipse. It follows how the board is made: a rectangular blank is radiused on top, the underside is worked down until it rises to meet the blank's original flat face, and the flat left over is softened last with a file. `F` is the flat side still standing before that filing.
+so shaping always stops a hair below wherever the file will reach. Both Meares drawings already
+followed that rule — each leaves 0.10 mm of flat once its corner is eased — and deriving F this
+way reproduces both presets to within microns while matching the traces exactly as well.
 
-```
-edge  = sqrt(R² - a²) - R        top corner of the playing arc
-side  = edge - F                 foot of the flat, where the underside arrives
-b     = side + T                 depth from there to the centre
-y_under(x) = side - b (1 - |x/a|ⁿ)^(1/n)
-```
+That makes D the whole story: the playing circle, width and maximum thickness stay fixed, and
+everything below the crown follows from D. The cost is that the underside template now moves
+with D, where it used to be independent of it. Physically that is the honest order: to know
+where to stop shaping you have to know how much you intend to file off. Generate the template
+after settling the rounding.
 
-Only the exponent `n` is chosen; `a`, `b` and everything else follow from W, R, T and F. The default `n = 1.69` is the joint least-squares fit to both Meares traces with each flat sized to its own corner drop. It is a tuning dial, not a recovered historical construction rule. The presets are Meares-inspired interpretations; the overlays preserve the traced drawings, including their asymmetry.
+The 0.1 mm allowance is absolute, not a proportion, because it is a workshop constant rather
+than a design ratio. Scaled sections are therefore not exactly similar — F1 and F7 depart from
+exact similarity by at most that allowance, about 27 microns on the smaller section.
 
-The superellipse reaches the flat face with a **vertical tangent**, which is what the wood does and what no curve written `y = f(x)` can do — its slope would have to be infinite. The earlier construction needed a separate quintic Bézier purely to bridge that gap, and is kept for comparison as `model: 'quartic'`; it uses six chosen constants where this uses one.
-
-Two costs come with `n < 2`: curvature is unbounded at the centre and at the flat face, where the old Bézier arrived at zero curvature. Both singularities sit within a micron of the extremes, below what any tool resolves in wood. The corner fillet still has tangent continuity (G1) and its curvature changes at the joins.
-
-`F` is leftover stock, not a design proportion, so it only has to outlast the corner drop. It is set as a fraction of T (`sideFraction`, default 0.1). Meares 1 keeps 0.1 for its 2.59 mm drop; Meares 2 uses 0.0164, giving 0.42 mm for its 0.32 mm drop.
-
-Validation rejects incomplete dimensions, insufficient underside depth, nonconvex carving transitions, and corner rounding that consumes the flat side. Bernstein bounds and recursive subdivision check the carving curvature. If a combination is invalid, the section preview asks for valid measurements and geometry downloads are disabled.
+`model: 'quartic'` keeps the earlier behaviour, including its fixed `0.1 T` flat side and its
+independence from D, for comparison.
 
 The [latest comparison](../analysis/latest-meares-overlay.png) uses a 4 mm corner radius for Meares 1, giving about 2.59 mm of corner drop and 0.10 mm of remaining flat wall at the assumed 60 mm width. This lowers the top corners while preserving the previously accepted underside. Meares 2 retains its 0.5 mm corner radius. These remain symmetric interpretations of asymmetric drawings.
 

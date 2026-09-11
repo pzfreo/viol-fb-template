@@ -56,11 +56,10 @@ test('review tabs show measured F1/F7 and export the selected full-size outline'
 });
 test('rounding follows the reviewed fret and name errors do not block outline review',async()=>{
   const ui=app();await enterMeasurements(ui);
-  // 25% of each section's flat side: 0.50 mm at F1's 2.00 mm, 0.55 mm at F7's 2.20 mm.
-  await ui.input('cornerDrop-number',25);assert.match(ui.get('metric-cornerDrop').textContent,/0.50/);
-  assert.match(ui.get('cornerDrop-max').textContent,/100% · 2.00 mm/);
+  // Millimetres at the reviewed fret, scaled to the other by thickness.
+  await ui.input('cornerDrop-number',.5);assert.match(ui.get('metric-cornerDrop').textContent,/0.50/);
   await ui.get('tab-f7').click();assert.match(ui.get('metric-cornerDrop').textContent,/0.55/);
-  assert.match(ui.get('cornerDrop-max').textContent,/100% · 2.20 mm/);
+  assert.match(ui.get('cornerDrop-max').textContent,/6.00 mm/);
   await ui.input('pair-name','W'.repeat(29));
   assert.equal(ui.get('export-pair').disabled,true);assert.equal(ui.get('export-3mf').disabled,true);
   assert.equal(ui.get('export-outline').disabled,false);assert.match(ui.get('metric-width').textContent,/52.13/);

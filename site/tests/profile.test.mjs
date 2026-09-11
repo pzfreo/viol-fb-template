@@ -1,15 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { DEFAULTS, PRESETS, FLAT_SIDE_FRACTION, radiusForCornerDrop, surface, bezier, curveRadius, cornerPoint, validate, generate, exportSvg } from '../src/profile.js';
+import { DEFAULTS, PRESETS, FLAT_SIDE_FRACTION, SHAPING_MARGIN, flatSide, radiusForCornerDrop, surface, bezier, curveRadius, cornerPoint, validate, generate, exportSvg } from '../src/profile.js';
 import { makeTemplate, exportTemplateSvg } from '../src/template.js';
 import { STENCIL_FONT } from '../src/stencil-font.js';
 const near=(a,b,t=1e-8)=>assert.ok(Math.abs(a-b)<t,`${a} != ${b}`);
 const curvature=s=>Math.abs(s.second)/(1+s.first*s.first)**1.5;
 
-test('corner easing leaves the entire underside and its template contact unchanged',()=>{
-  const baseline=generate({...DEFAULTS,blend:0});
+test('corner easing leaves the entire quartic underside and its template contact unchanged',()=>{
+  const QUARTIC={...DEFAULTS,model:'quartic'};
+  const baseline=generate({...QUARTIC,blend:0});
   for(const blend of [.25,.5,1,1.5]){
-    const p=generate({...DEFAULTS,blend});
+    const p=generate({...QUARTIC,blend});
     assert.deepEqual(p.underside,baseline.underside);
     assert.deepEqual(p.carveBlend,baseline.carveBlend);
     assert.deepEqual(makeTemplate(p,'Meares 1').contact,makeTemplate(baseline,'Meares 1').contact);
@@ -21,12 +22,36 @@ test('corner easing leaves the entire underside and its template contact unchang
   }
 });
 
+test('rounding moves the superellipse underside, because shaping stops just below the file',()=>{
+  const baseline=generate({...DEFAULTS,blend:0});
+  near(baseline.flatSideHeight,SHAPING_MARGIN);
+  let previous=baseline.sideY;
+  for(const blend of [.25,.5,1,1.5]){
+    const p=generate({...DEFAULTS,blend});
+    const drop=p.edgeY-p.corner.sideTopY;
+    // The one rule: stop shaping a fixed hair below wherever the file reaches.
+    near(flatSide(p.params),drop+SHAPING_MARGIN);
+    near(p.flatSideHeight,SHAPING_MARGIN);
+    assert.ok(p.sideY<previous,'more rounding means shaping stops lower');
+    previous=p.sideY;
+    // The crown, the width and the centre thickness are still untouched by it.
+    near(p.bottom,baseline.bottom);near(p.top,baseline.top);
+    for(let i=0;i<=200;i++){
+      const x=p.joinX*i/200;
+      assert.deepEqual(surface(x,p.params),surface(x,baseline.params));
+    }
+  }
+});
+
 test('zero rounding retains the sharp arc-to-flat-side corner',()=>{
-  const p=generate({...DEFAULTS,blend:0});
-  near(p.joinX,DEFAULTS.width/2);
-  assert.ok(p.points.some(([x,y])=>x===DEFAULTS.width/2 && y===p.edgeY));
-  near(p.flatSideHeight,.1*DEFAULTS.thickness);
-  assert.deepEqual(cornerPoint(p.corner,0),[DEFAULTS.width/2,p.edgeY]);
+  for(const [params,flat] of [[DEFAULTS,SHAPING_MARGIN],
+                              [{...DEFAULTS,model:'quartic'},FLAT_SIDE_FRACTION*DEFAULTS.thickness]]){
+    const p=generate({...params,blend:0});
+    near(p.joinX,DEFAULTS.width/2);
+    assert.ok(p.points.some(([x,y])=>x===DEFAULTS.width/2 && y===p.edgeY));
+    near(p.flatSideHeight,flat);
+    assert.deepEqual(cornerPoint(p.corner,0),[DEFAULTS.width/2,p.edgeY]);
+  }
 });
 
 test('rounding removes wood only, preserving width and centre thickness',()=>{
@@ -62,13 +87,14 @@ test('small finish is tangent to the playing circle and vertical side',()=>{
   }
 });
 
-test('Meares 1 lowered corners preserve the accepted underside and centre',()=>{
+test('Meares 1 lowered corners keep the crown and centre, and leave the same hair of flat',()=>{
   const before=generate({...PRESETS.meares1,blend:.5}),after=generate(PRESETS.meares1);
-  assert.deepEqual(after.underside,before.underside);
-  assert.deepEqual(after.carveBlend,before.carveBlend);
   near(after.bottom,before.bottom);
-  assert.ok(before.corner.sideTopY-after.corner.sideTopY>2);
-  assert.ok(after.flatSideHeight>0 && after.flatSideHeight<.15);
+  assert.ok(before.corner.sideTopY-after.corner.sideTopY>2,'the 4 mm fillet drops the corner much further');
+  // Both stop shaping the same hair below the file, so both leave 0.1 mm of flat
+  // while the shaping itself reaches very different heights.
+  near(after.flatSideHeight,SHAPING_MARGIN);near(before.flatSideHeight,SHAPING_MARGIN);
+  assert.ok(before.sideY-after.sideY>2,'the deeper rounding means shaping stops lower');
   for(let i=0;i<=100;i++){
     const x=after.joinX*i/100;
     assert.deepEqual(surface(x,after.params),surface(x,before.params));
@@ -92,9 +118,20 @@ test('underside blends into the flat wall with zero curvature and into the quart
 });
 
 test('impossible dimensions and rounding that removes the flat side are rejected',()=>{
-  for(const patch of [{width:0},{radius:NaN},{blend:-1},{thickness:Infinity},{width:1001},{blend:5},{radius:20}]){
+  for(const patch of [{width:0},{radius:NaN},{blend:-1},{thickness:Infinity},{width:1001},{radius:20}]){
     const p={...DEFAULTS,...patch};assert.equal(validate(p).valid,false);assert.throws(()=>generate(p),RangeError);
+    const q={...DEFAULTS,model:'quartic',...patch};assert.equal(validate(q).valid,false);
   }
+  // A 5 mm fillet used to be impossible because it outran the fixed flat side.
+  // Coupled, it simply means the shaping stops lower; only the quartic rejects it.
+  assert.equal(validate({...DEFAULTS,model:'quartic',blend:5}).valid,false);
+  assert.equal(validate({...DEFAULTS,blend:5}).valid,true);
+  // Rounding can no longer eat the flat on the coupled model: the shaping stops
+  // below the file by construction. It still can on the fixed-flat quartic.
+  const eats=radiusForCornerDrop(FLAT_SIDE_FRACTION*DEFAULTS.thickness,DEFAULTS);
+  assert.equal(validate({...DEFAULTS,model:'quartic',blend:eats}).valid,false);
+  assert.equal(validate({...DEFAULTS,blend:eats}).valid,true);
+  near(generate({...DEFAULTS,blend:eats}).flatSideHeight,SHAPING_MARGIN);
 });
 
 test('underside gauge retains Overstand margins and exactly matches its contact geometry',()=>{
@@ -130,18 +167,27 @@ test('SVG coordinates and physical units have a 1:1 scale',()=>{
 });
 
 
-test('corner drop sets the actual vertical lowering while retaining the underside',()=>{
+test('corner drop sets the actual vertical lowering, and the shaping follows it',()=>{
   for(const base of [DEFAULTS,...Object.values(PRESETS)]){
-    const original=generate({...base,blend:0});
-    const wall=(base.sideFraction??FLAT_SIDE_FRACTION)*base.thickness;
-    for(const drop of [0,wall*.3,wall*.7,wall-.05]){
-      const blend=radiusForCornerDrop(drop,base);
-      const p=generate({...base,blend});
+    for(const drop of [0,.3,1,2,4]){
+      const p=generate({...base,blend:radiusForCornerDrop(drop,base)});
       near(p.edgeY-p.corner.sideTopY,drop);
+      near(flatSide(p.params),drop+SHAPING_MARGIN);
+      near(p.flatSideHeight,SHAPING_MARGIN);
+      near(p.bottom,-base.thickness);
+    }
+  }
+  // The quartic keeps its fixed flat side and its independence from the rounding.
+  for(const base of [DEFAULTS,...Object.values(PRESETS)]){
+    const quartic={...base,model:'quartic'},original=generate({...quartic,blend:0});
+    const wall=FLAT_SIDE_FRACTION*base.thickness;
+    for(const drop of [0,wall*.3,wall*.7,wall-.05]){
+      const p=generate({...quartic,blend:radiusForCornerDrop(drop,base)});
       assert.deepEqual(p.underside,original.underside);
       near(p.flatSideHeight,wall-drop);
     }
   }
   for(const drop of [-1,NaN,Infinity,100])assert.ok(Number.isNaN(radiusForCornerDrop(drop,DEFAULTS)));
-  assert.equal(validate({...DEFAULTS,blend:radiusForCornerDrop(FLAT_SIDE_FRACTION*DEFAULTS.thickness,DEFAULTS)}).valid,false);
+  assert.equal(validate({...DEFAULTS,model:'quartic',
+    blend:radiusForCornerDrop(FLAT_SIDE_FRACTION*DEFAULTS.thickness,DEFAULTS)}).valid,false);
 });

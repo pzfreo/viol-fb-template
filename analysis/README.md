@@ -110,8 +110,11 @@ way instead of fixing it at `0.1 T` changes the result:
 
 Both drawings improve, and the gain is largest at the sides (4.93 to 2.89; 3.89 to 1.63) where
 the quartic needed its carving piece. A fixed `0.1 T` wall was forcing meares2 to carry 2.56 mm
-of flat it never wanted; sized to its 0.32 mm corner drop it needs 0.42 mm. The presets record
-that: meares1 keeps `sideFraction` 0.1 for its 2.59 mm drop, meares2 uses 0.0164.
+of flat it never wanted; sized to its 0.32 mm corner drop it needs 0.42 mm. Better still, the flat need not be a
+number at all. Both drawings leave 0.10 mm of flat once their corners are eased, so setting
+`F = D + 0.1 mm` derives it from the rounding and reproduces meares1 to 0.2 microns and meares2
+to 3.5 microns. The presets carry no flat-side number; the corner rounding is the only control
+over the section, and the pooled fit is unchanged at 2.31 px.
 
 The vertical meeting is the point. A curve written `y = f(x)` has finite slope everywhere, so
 no polynomial can arrive at the blank's vertical face; the quartic needed a separate blending

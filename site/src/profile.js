@@ -3,27 +3,21 @@
  * All lengths are millimetres. Crown is (0, 0); underside centre is (0, -T).
  */
 export const DEFAULTS = Object.freeze({ width: 60, radius: 70, thickness: 26, blend: .5 });
-// Flat sides are sized to each drawing's corner drop plus a hair, since the
-// wall is only what the file needs, not a design proportion. See PRESETS notes
-// in analysis/README.md.
 export const PRESETS = Object.freeze({
-  meares1: { width: 60, radius: 70.25, thickness: 26.87, blend: 4, sideFraction: .1 },
-  meares2: { width: 60, radius: 69.38, thickness: 25.55, blend: .5, sideFraction: .0164 },
+  meares1: { width: 60, radius: 70.25, thickness: 26.87, blend: 4 },
+  meares2: { width: 60, radius: 69.38, thickness: 25.55, blend: .5 },
 });
-/** The vertical wall left on the blank. The board starts as a rectangular
- * section: the underside is worked down to the template until it rises to meet
- * the original flat face, and whatever flat is left is then softened with a
- * file. So this is leftover stock sized to what the file needs, not a design
- * proportion -- it only has to outlast the corner drop. 0.1 is a safe default
- * for a fresh design; the traces prefer far less (meares2 wants 0.0164).
+/** The quartic model's fixed flat side, as a fraction of thickness. The
+ * superellipse derives its own from the corner rounding instead; see
+ * SHAPING_MARGIN.
  */
 export const FLAT_SIDE_FRACTION = .1;
 /** Underside model. 'superellipse' is the default: one equation,
  * (x/a)^n + (y/b)^n = 1, spanning the whole underside from the centre to the
  * wall, which it reaches with a vertical tangent -- matching how the board is
  * actually worked, and something no y = f(x) polynomial can do. Only the
- * exponent is chosen; a, b and the wall height follow from W, R, T and the
- * flat side left on the blank.
+ * exponent is chosen; a, b and the flat side all follow from W, R, T and the
+ * corner rounding.
  *
  * 'quartic' is the earlier construction, kept for comparison: a quartic in x
  * over the central span plus a G2 quintic Bezier carving up into the wall,
@@ -35,17 +29,43 @@ export const FLAT_SIDE_FRACTION = .1;
  */
 export const UNDERSIDE_MODELS = Object.freeze(['quartic','superellipse']);
 export const SUPERELLIPSE_EXPONENT = 1.69;
-export const SUPERELLIPSE_SIDE_FRACTION = FLAT_SIDE_FRACTION;
+/** The hair of flat left standing after the corner is filed. Shaping stops
+ * this far below where the file will reach, which is the rule both Meares
+ * presets already followed: each leaves 0.10 mm once its corner is eased.
+ * Deriving the flat this way removes the separate flat-side number entirely --
+ * the corner rounding D is then the only control over the whole section, and
+ * the presets are reproduced to within microns.
+ */
+export const SHAPING_MARGIN = .1;
 const modelOf = params => params.model ?? 'superellipse';
 const exponentOf = params => params.exponent ?? SUPERELLIPSE_EXPONENT;
-const sideFractionOf = params => modelOf(params)==='superellipse'
-  ? params.sideFraction ?? SUPERELLIPSE_SIDE_FRACTION : FLAT_SIDE_FRACTION;
+
+// The fillet joining the playing arc to the flat face. Depends on W, R and
+// blend only, so the flat side can be derived from it without circularity.
+function cornerGeometry(params) {
+  const {width,radius,blend}=params, a=width/2;
+  const edgeY=Math.sqrt(radius**2-a*a)-radius;
+  if(!(blend>0))return {radius:0,center:[a,edgeY],angle:0,joinX:a,sideTopY:edgeY};
+  const cx=a-blend, cy=-radius+Math.sqrt((radius-blend)**2-cx*cx);
+  return {radius:blend,center:[cx,cy],angle:Math.atan2(cy+radius,cx),
+    joinX:radius*cx/(radius-blend),sideTopY:cy};
+}
+/** How far up the side the shaping goes, in millimetres: how much flat is left
+ * standing on the blank when you stop and pick up the file. Derived from the
+ * corner rounding unless pinned explicitly.
+ */
+export function flatSide(params) {
+  if(modelOf(params)!=='superellipse')return FLAT_SIDE_FRACTION*params.thickness;
+  if(params.sideFraction!==undefined)return params.sideFraction*params.thickness;
+  const {width,radius}=params, a=width/2;
+  return (Math.sqrt(radius**2-a*a)-radius)-cornerGeometry(params).sideTopY+SHAPING_MARGIN;
+}
 
 // Half-depth of the superellipse: it spans from the underside centre at -T up
 // to the foot of the wall, which it meets with a vertical tangent.
 function superellipse(params) {
   const a=params.width/2;
-  const sideY=surface(a,params).y-sideFractionOf(params)*params.thickness;
+  const sideY=surface(a,params).y-flatSide(params);
   return {a,sideY,depth:sideY+params.thickness,n:exponentOf(params)};
 }
 /** Right half of the superellipse, parametrised from the wall (t=0) to the
@@ -74,7 +94,8 @@ export function surface(x, params, underside = false) {
     const root = Math.sqrt(params.radius ** 2 - x ** 2);
     return { y: root - params.radius, first: -x/root, second: -(params.radius**2)/root**3 };
   }
-  // These coefficients depend on W, R and T only. Blend NEVER enters this curve.
+  // The quartic below depends on W, R and T only. The superellipse also takes
+  // in the corner rounding, through the flat side that rounding leaves.
   if (modelOf(params) === 'superellipse') {
     const {sideY,depth,n}=superellipse(params), u=Math.abs(x)/a, s=1-u**n;
     // d/du (1-u^n)^(1/n) = -u^(n-1) (1-u^n)^(1/n-1); the sign follows x.
@@ -107,9 +128,9 @@ export function construction(params) {
   const {width,radius,thickness,blend}=params;
   const a=width/2;
   const edgeY=surface(a,params).y;
-  // What is left of the blank's flat face once the underside is worked to the
-  // template. Independent of corner easing, which is filed from it afterwards.
-  const sideY=edgeY-sideFractionOf(params)*thickness;
+  // Where the shaping stops: the flat face still standing when you pick up the
+  // file. Derived from the corner rounding, so the two move together.
+  const sideY=edgeY-flatSide(params);
   // The superellipse already arrives at the wall vertically, so it needs no
   // carving piece and joins at the full half width instead of short of it.
   const superellipseModel=modelOf(params)==='superellipse';
@@ -121,14 +142,7 @@ export function construction(params) {
   const carveBlend=superellipseModel?null
     :hermite([a,sideY],[underJoinX,bottom.y],[0,-vertical],
     [-length,-length*bottom.first],[0,0],[0,bottom.second*length*length]);
-  let corner={radius:0,center:[a,edgeY],angle:0,joinX:a,sideTopY:edgeY};
-  if(blend>0){
-    const cx=a-blend;
-    const cy=-radius+Math.sqrt((radius-blend)**2-cx*cx);
-    const angle=Math.atan2(cy+radius,cx);
-    corner={radius:blend,center:[cx,cy],angle,
-      joinX:radius*cx/(radius-blend),sideTopY:cy};
-  }
+  const corner=cornerGeometry(params);
   return {edgeY,sideY,underJoinX,carveBlend,vertical,corner,
     flatSideHeight:corner.sideTopY-sideY};
 }
@@ -172,8 +186,8 @@ export function validate(params) {
     // Convexity needs no checking here: a superellipse is convex for every n>1.
     if(!(exponentOf(params)>1)||!Number.isFinite(exponentOf(params)))
       return {valid:false,message:'The superellipse exponent must be greater than 1.'};
-    if(!(sideFractionOf(params)>=0)||!Number.isFinite(sideFractionOf(params)))
-      return {valid:false,message:'The flat-side fraction must be zero or more.'};
+    if(!(flatSide(params)>0)||!Number.isFinite(flatSide(params)))
+      return {valid:false,message:'The flat-side height must be greater than zero.'};
     const geometry=construction(params);
     if(!(superellipse(params).depth>0))
       return {valid:false,message:'Increase thickness or crown radius to leave depth below the flat sides.'};

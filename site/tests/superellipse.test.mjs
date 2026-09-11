@@ -1,13 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { DEFAULTS, PRESETS, FLAT_SIDE_FRACTION, SUPERELLIPSE_EXPONENT, radiusForCornerDrop,
-  surface, superellipsePoint, validate, generate, exportSvg } from '../src/profile.js';
+import { DEFAULTS, PRESETS, FLAT_SIDE_FRACTION, SHAPING_MARGIN, SUPERELLIPSE_EXPONENT,
+  flatSide, radiusForCornerDrop, surface, superellipsePoint, validate, generate, exportSvg } from '../src/profile.js';
 import { makeTemplate } from '../src/template.js';
 const near=(a,b,t=1e-8)=>assert.ok(Math.abs(a-b)<t,`${a} != ${b}`);
 const curvature=s=>Math.abs(s.second)/(1+s.first*s.first)**1.5;
 const SUPER=params=>({...params,model:'superellipse'});
 const QUARTIC=params=>({...params,model:'quartic'});
-const wallOf=params=>(params.sideFraction??FLAT_SIDE_FRACTION)*params.thickness;
+const wallOf=params=>flatSide(params);
 const CASES=[DEFAULTS,...Object.values(PRESETS)].map(SUPER);
 
 test('the superellipse is the default and the quartic remains available intact',()=>{
@@ -34,7 +34,7 @@ test('one equation replaces the quartic, its carving Bezier and their four const
     near(p.underJoinX,params.width/2); // the underside reaches the wall itself
     // Everything but the exponent comes from W, R and T.
     const a=params.width/2, edge=Math.sqrt(params.radius**2-a*a)-params.radius;
-    const sideY=edge-wallOf(params), depth=sideY+params.thickness;
+    const sideY=edge-flatSide(params), depth=sideY+params.thickness;
     for(const u of [0,.25,.5,.75,1]){
       const n=SUPERELLIPSE_EXPONENT, x=u*a;
       near(surface(x,params,true).y,sideY-depth*(1-u**n)**(1/n));
@@ -94,16 +94,29 @@ test('the underside is convex and descends monotonically from wall to centre',()
   }
 });
 
-test('corner drop still leaves the whole superellipse underside untouched',()=>{
+test('one control: the shaping stops a fixed hair below wherever the file reaches',()=>{
   for(const base of CASES){
-    const original=generate({...base,blend:0});
-    for(const drop of [0,wallOf(base)*.3,wallOf(base)*.7,wallOf(base)-.05]){
+    let lower=Infinity;
+    for(const drop of [0,.3,1,2,4]){
       const p=generate({...base,blend:radiusForCornerDrop(drop,base)});
       near(p.edgeY-p.corner.sideTopY,drop);
-      assert.deepEqual(p.underside,original.underside);
-      assert.deepEqual(makeTemplate(p,'Meares 1').contact,makeTemplate(original,'Meares 1').contact);
-      near(p.flatSideHeight,wallOf(base)-drop);
+      near(flatSide(p.params),drop+SHAPING_MARGIN);
+      near(p.flatSideHeight,SHAPING_MARGIN);
+      // The template contact follows the rounding, which is the cost of one control.
+      const contact=makeTemplate(p,'Meares 1').contact;
+      assert.equal(contact.length,p.underside.length);
+      assert.ok(p.sideY<lower,'more rounding means shaping stops lower');
+      lower=p.sideY;
+      near(p.bottom,-base.thickness);
     }
+  }
+});
+
+test('the presets need no flat-side number: it follows from their rounding',()=>{
+  for(const params of Object.values(PRESETS)){
+    assert.equal(params.sideFraction,undefined,'no flat-side number is stored');
+    const p=generate(params);
+    near(p.flatSideHeight,SHAPING_MARGIN);
   }
 });
 
@@ -143,8 +156,13 @@ test('the model choice is validated and the two models differ only below the cro
   }
   assert.ok(validate(SUPER(DEFAULTS)).message.includes('Superellipse'));
   const q=generate(QUARTIC(DEFAULTS)),s=generate(SUPER(DEFAULTS));
-  near(q.edgeY,s.edgeY);near(q.sideY,s.sideY);near(q.bottom,s.bottom);
+  near(q.edgeY,s.edgeY);near(q.bottom,s.bottom);
   assert.deepEqual(q.corner,s.corner);
+  // They part company at the flat side: the quartic's is a fixed share of the
+  // thickness, the superellipse's follows the rounding.
+  near(flatSide(QUARTIC(DEFAULTS)),FLAT_SIDE_FRACTION*DEFAULTS.thickness);
+  near(flatSide(SUPER(DEFAULTS)),(s.edgeY-s.corner.sideTopY)+SHAPING_MARGIN);
+  assert.ok(q.sideY<s.sideY,'the quartic leaves much more flat standing');
   for(let i=0;i<=100;i++){
     const x=q.joinX*i/100;
     assert.deepEqual(surface(x,QUARTIC(DEFAULTS)),surface(x,SUPER(DEFAULTS)),'playing arc is shared');
@@ -152,29 +170,24 @@ test('the model choice is validated and the two models differ only below the cro
   assert.notDeepEqual(q.underside,s.underside);
 });
 
-test('exponent and flat side are dials, and a thinner wall limits the corner drop',()=>{
+test('the exponent stays a dial, and the flat side can still be pinned explicitly',()=>{
   const base=SUPER(DEFAULTS);
-  // Defaults are a drop-in swap: same wall as the quartic, same available drop.
-  near(generate({...base,blend:0}).flatSideHeight,FLAT_SIDE_FRACTION*DEFAULTS.thickness);
-  near(generate(QUARTIC({...DEFAULTS,blend:0})).flatSideHeight,FLAT_SIDE_FRACTION*DEFAULTS.thickness);
-  // Both ends are pinned at -T and the wall, so the exponent only moves the
+  // Both ends are pinned at -T and the flat, so the exponent only moves the
   // span between them: a squarer curve stays deep further out, removing more
-  // wood, and then turns up harder into the wall.
+  // wood, and then turns up harder into the flat.
   const round=generate({...base,exponent:1.4}).underside,square=generate({...base,exponent:2.4}).underside;
   const at=(pts,x)=>pts.filter(([px])=>px>=0).reduce((a,b)=>Math.abs(b[0]-x)<Math.abs(a[0]-x)?b:a)[1];
   for(const x of [6,12,18,24])assert.ok(at(square,x)<at(round,x),`n=2.4 sits deeper at x=${x}`);
   for(const pts of [round,square]){
     near(Math.min(...pts.map(v=>v[1])),-DEFAULTS.thickness);
-    near(Math.max(...pts.map(v=>v[1])),generate({...base,blend:0}).sideY);
+    near(Math.max(...pts.map(v=>v[1])),generate(base).sideY);
   }
-  // The trace-optimal setting is reachable, and its thin wall is what limits drop.
-  const thin={...base,exponent:1.74,sideFraction:.019,blend:0};
-  assert.equal(validate(thin).valid,true);
-  near(generate(thin).flatSideHeight,.019*DEFAULTS.thickness);
-  assert.ok(generate(thin).flatSideHeight<.6,'about half a millimetre of wall');
-  assert.equal(validate({...thin,blend:radiusForCornerDrop(1,DEFAULTS)}).valid,false);
-  assert.equal(validate({...base,blend:radiusForCornerDrop(1,DEFAULTS)}).valid,true);
-  for(const patch of [{sideFraction:-.1},{sideFraction:NaN}])
+  // sideFraction remains as an escape hatch, overriding the coupling.
+  const pinned={...base,sideFraction:.1,blend:0};
+  near(flatSide(pinned),.1*DEFAULTS.thickness);
+  near(generate(pinned).flatSideHeight,.1*DEFAULTS.thickness);
+  assert.ok(flatSide({...base,blend:0})<flatSide(pinned),'the coupling leaves far less');
+  for(const patch of [{sideFraction:-.1},{sideFraction:NaN},{sideFraction:0}])
     assert.equal(validate({...base,...patch}).valid,false);
 });
 
