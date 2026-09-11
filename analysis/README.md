@@ -76,7 +76,7 @@ central region is not where the models disagree.
 
 ![Superellipse fitted to the traced undersides](superellipse-comparison.png)
 
-Three caveats before treating `n = 1.67` as a result:
+Three caveats before treating that free-fit `n = 1.67` as a result:
 
 1. The best fit puts the curve's maximum-width height **above** the traced widest point, by
    1.26 mm (meares1) and 1.84 mm (meares2) at an assumed 60 mm width, so the trace stops short
@@ -92,36 +92,41 @@ Three caveats before treating `n = 1.67` as a result:
 
 ### What survives when it becomes a generator
 
-A **prototype** `model: 'superellipse'` now exists in `site/src/profile.js` alongside the
-shipped quartic, which remains the default. It replaces the quartic, the quintic carving
-Bezier and four of their six constants with one equation and one exponent; the convexity
-machinery goes too, since a superellipse is convex for every `n > 1`.
+The generator's default underside **is now this superellipse**; the quartic remains reachable
+as `model: 'quartic'`. One equation and one exponent replace three curve pieces and six chosen
+constants, and the Bernstein convexity machinery goes with them, since a superellipse is convex
+for every `n > 1`.
 
-Held to a single shared parameterisation, its advantage over the quartic disappears:
+The decisive correction came from how the board is actually made. A rectangular blank is
+radiused on top; the underside is then worked down until it rises to meet the blank's original
+flat face; whatever flat is left is softened last with a file. So the flat side is **leftover
+stock**, not a design proportion, and it only has to outlast the corner drop. Sizing it that
+way instead of fixing it at `0.1 T` changes the result:
 
-| Pooled nearest-point RMS, source pixels | value |
-| --- | ---: |
-| Per-drawing free fit (3 parameters each) | 1.80 |
-| Joint fit, shared `n` and flat side (`n` 1.74, fraction 0.019) | 3.14 |
-| Shipped quartic | 3.23 |
-| Prototype defaults (`n` 1.6, fraction 0.1) | 4.15 |
+| Nearest-point RMS, source pixels | meares1 | meares2 |
+| --- | ---: | ---: |
+| Superellipse, flat side sized to the corner drop, `n` 1.69 | **2.40** | **2.31** |
+| Quartic + Bezier + `0.1 T` flat side | 3.37 | 3.08 |
 
-The two drawings disagree about the wall: meares1 is fitted best by a flat side near
-`0.06 T`, meares2 by one near `0.008 T`. No single pair of values serves both, so the earlier
-free-fit numbers are a measure of what three per-drawing parameters can do, not of a shared
-design family. **Against these two traces the superellipse is at best a tie with the quartic.**
+Both drawings improve, and the gain is largest at the sides (4.93 to 2.89; 3.89 to 1.63) where
+the quartic needed its carving piece. A fixed `0.1 T` wall was forcing meares2 to carry 2.56 mm
+of flat it never wanted; sized to its 0.32 mm corner drop it needs 0.42 mm. The presets record
+that: meares1 keeps `sideFraction` 0.1 for its 2.59 mm drop, meares2 uses 0.0164.
 
-The prototype therefore ships as a drop-in swap, keeping the `0.1 T` wall so corner drop is
-unchanged and every preset stays valid, with `exponent` and `sideFraction` exposed for
-experimentation. The trace-optimal setting leaves about 0.5 mm of wall, which caps the corner
-drop the fillet can cut.
+The vertical meeting is the point. A curve written `y = f(x)` has finite slope everywhere, so
+no polynomial can arrive at the blank's vertical face; the quartic needed a separate blending
+Bezier purely to get there. The superellipse arrives vertically on its own, which is also what
+the wood does.
 
-It also costs smoothness the quartic has. For `n < 2` the curvature is unbounded at the centre
-*and* at the wall, where the quintic Bezier currently arrives at zero curvature (G2). The
-superellipse meets the wall with a vertical tangent, so G1 holds, but curvature jumps.
+Two costs are real and recorded in the tests. For `n < 2` curvature is unbounded at the centre
+*and* at the wall, where the quintic Bezier used to arrive at zero curvature (G2); the
+superellipse holds a vertical tangent there (G1) but its curvature diverges. Both singularities
+sit within a micron of the extremes, well below what a gouge, scraper or file resolves in wood.
+And `n` is a fitted dial, not a derived quantity: it ranges 1.52 to 1.84 depending on how the
+flat side is pinned, and the two drawings only agree closely once each is given its own wall.
 
 Reproduce with `.venv/bin/python scripts/fit_superellipse.py`; results are written to
-`superellipse-fit.json`. The generator's default underside is unchanged.
+`superellipse-fit.json`.
 
 ## Method and accuracy
 

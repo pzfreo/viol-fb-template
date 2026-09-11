@@ -45,17 +45,22 @@ The crown is `(0, 0)` and the underside centre is `(0, -T)`. With `a = W/2`, the
 y_top(x) = sqrt(R² - x²) - R
 ```
 
-The underside is a fixed quartic curve:
+The underside is a single superellipse. It follows how the board is made: a rectangular blank is radiused on top, the underside is worked down until it rises to meet the blank's original flat face, and the flat left over is softened last with a file. `F` is the flat side still standing before that filing.
 
 ```
-h = 0.85 T + sqrt(R² - a²) - R
-u = x / a
-y_under(x) = -T + h (0.85 u² + 0.15 u⁴)
+edge  = sqrt(R² - a²) - R        top corner of the playing arc
+side  = edge - F                 foot of the flat, where the underside arrives
+b     = side + T                 depth from there to the centre
+y_under(x) = side - b (1 - |x/a|ⁿ)^(1/n)
 ```
 
-The quartic proportions are a chosen design family, not a recovered historical construction rule. They leave room for the side blends while giving a deeper, noncircular underside. The presets are Meares-inspired interpretations; the overlays preserve the traced drawings, including their asymmetry. Overlays are scaled to equal width and aligned at the crown. No original physical dimensions are known.
+Only the exponent `n` is chosen; `a`, `b` and everything else follow from W, R, T and F. The default `n = 1.69` is the joint least-squares fit to both Meares traces with each flat sized to its own corner drop. It is a tuning dial, not a recovered historical construction rule. The presets are Meares-inspired interpretations; the overlays preserve the traced drawings, including their asymmetry.
 
-The construction starts with vertical sides below the playing arc. A nominal flat side of `0.1 T` remains before corner rounding. This retained height is an explicit assumption, not a measurement recovered from the scans. The underside is carved up into the bottom of that wall with a quintic Bézier transition spanning `0.12 W`, matching tangent and curvature at the quartic and the straight wall (G2). The final circular corner fillet has tangent continuity (G1); its curvature changes at the joins.
+The superellipse reaches the flat face with a **vertical tangent**, which is what the wood does and what no curve written `y = f(x)` can do — its slope would have to be infinite. The earlier construction needed a separate quintic Bézier purely to bridge that gap, and is kept for comparison as `model: 'quartic'`; it uses six chosen constants where this uses one.
+
+Two costs come with `n < 2`: curvature is unbounded at the centre and at the flat face, where the old Bézier arrived at zero curvature. Both singularities sit within a micron of the extremes, below what any tool resolves in wood. The corner fillet still has tangent continuity (G1) and its curvature changes at the joins.
+
+`F` is leftover stock, not a design proportion, so it only has to outlast the corner drop. It is set as a fraction of T (`sideFraction`, default 0.1). Meares 1 keeps 0.1 for its 2.59 mm drop; Meares 2 uses 0.0164, giving 0.42 mm for its 0.32 mm drop.
 
 Validation rejects incomplete dimensions, insufficient underside depth, nonconvex carving transitions, and corner rounding that consumes the flat side. Bernstein bounds and recursive subdivision check the carving curvature. If a combination is invalid, the section preview asks for valid measurements and geometry downloads are disabled.
 

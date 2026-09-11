@@ -6,19 +6,23 @@ import { makeTemplate } from '../src/template.js';
 const near=(a,b,t=1e-8)=>assert.ok(Math.abs(a-b)<t,`${a} != ${b}`);
 const curvature=s=>Math.abs(s.second)/(1+s.first*s.first)**1.5;
 const SUPER=params=>({...params,model:'superellipse'});
+const QUARTIC=params=>({...params,model:'quartic'});
+const wallOf=params=>(params.sideFraction??FLAT_SIDE_FRACTION)*params.thickness;
 const CASES=[DEFAULTS,...Object.values(PRESETS)].map(SUPER);
 
-test('the shipped quartic stays the default and is untouched by the prototype',()=>{
+test('the superellipse is the default and the quartic remains available intact',()=>{
   for(const params of [DEFAULTS,...Object.values(PRESETS)]){
-    assert.equal(params.model,undefined);
-    const p=generate(params);
-    assert.ok(p.carveBlend,'default keeps the carving Bezier');
-    near(p.underJoinX,params.width/2-.12*params.width);
-    // The quartic underside is unchanged by the existence of the other model.
+    assert.equal(params.model,undefined,'presets do not name a model');
+    assert.equal(generate(params).carveBlend,null,'the default builds no carving piece');
+    assert.deepEqual(generate(params).underside,generate(SUPER(params)).underside);
+    // The quartic is still reachable and still exactly what it always was.
+    const q=generate(QUARTIC(params));
+    assert.ok(q.carveBlend,'the quartic keeps its carving Bezier');
+    near(q.underJoinX,params.width/2-.12*params.width);
     const h=.85*params.thickness+Math.sqrt(params.radius**2-(params.width/2)**2)-params.radius;
     for(const u of [0,.3,.7,1]){
       const x=u*params.width/2;
-      near(surface(x,params,true).y,-params.thickness+h*(.85*u*u+.15*u**4));
+      near(surface(x,QUARTIC(params),true).y,-params.thickness+h*(.85*u*u+.15*u**4));
     }
   }
 });
@@ -30,7 +34,7 @@ test('one equation replaces the quartic, its carving Bezier and their four const
     near(p.underJoinX,params.width/2); // the underside reaches the wall itself
     // Everything but the exponent comes from W, R and T.
     const a=params.width/2, edge=Math.sqrt(params.radius**2-a*a)-params.radius;
-    const sideY=edge-FLAT_SIDE_FRACTION*params.thickness, depth=sideY+params.thickness;
+    const sideY=edge-wallOf(params), depth=sideY+params.thickness;
     for(const u of [0,.25,.5,.75,1]){
       const n=SUPERELLIPSE_EXPONENT, x=u*a;
       near(surface(x,params,true).y,sideY-depth*(1-u**n)**(1/n));
@@ -93,12 +97,12 @@ test('the underside is convex and descends monotonically from wall to centre',()
 test('corner drop still leaves the whole superellipse underside untouched',()=>{
   for(const base of CASES){
     const original=generate({...base,blend:0});
-    for(const drop of [0,.3,1,2,FLAT_SIDE_FRACTION*base.thickness-.05]){
+    for(const drop of [0,wallOf(base)*.3,wallOf(base)*.7,wallOf(base)-.05]){
       const p=generate({...base,blend:radiusForCornerDrop(drop,base)});
       near(p.edgeY-p.corner.sideTopY,drop);
       assert.deepEqual(p.underside,original.underside);
       assert.deepEqual(makeTemplate(p,'Meares 1').contact,makeTemplate(original,'Meares 1').contact);
-      near(p.flatSideHeight,FLAT_SIDE_FRACTION*base.thickness-drop);
+      near(p.flatSideHeight,wallOf(base)-drop);
     }
   }
 });
@@ -109,21 +113,24 @@ test('curvature is unbounded at the centre and at the wall, unlike the quartic',
   // curvature (G2). The superellipse gives up both for its single equation.
   const params=SUPER(DEFAULTS),a=params.width/2;
   let centre=Infinity;
-  for(const x of [3,.6,.06,.006]){
+  // Each decade closer to the centre roughly halves the radius, with no floor.
+  for(const x of [3,.6,.06,.006,.0006,.00006]){
     const radius=1/curvature(surface(x,params,true));
     assert.ok(radius<centre,'radius keeps shrinking towards the centre');
     centre=radius;
   }
-  assert.ok(centre<5,'centre curvature radius collapses');
+  assert.ok(centre<2,'centre curvature radius collapses');
   let wall=Infinity;
-  for(const x of [a-1,a-.1,a-.01]){
+  for(const x of [a-1,a-.1,a-.01,a-.001]){
     const radius=1/curvature(surface(x,params,true));
     assert.ok(radius<wall,'radius keeps shrinking towards the wall');
     wall=radius;
   }
-  assert.ok(wall<5,'wall curvature radius collapses');
+  assert.ok(wall<3,'wall curvature radius collapses');
+  // Both singularities sit far inside a micron of the extremes, so they are
+  // real but below anything a gouge, scraper or file resolves in wood.
   // The quartic, for contrast, stays finite and near constant across the span.
-  const quartic=[.006,3,9].map(x=>1/curvature(surface(x,DEFAULTS,true)));
+  const quartic=[.006,3,9].map(x=>1/curvature(surface(x,QUARTIC(DEFAULTS),true)));
   for(const radius of quartic)assert.ok(radius>20&&radius<60,`${radius} stays moderate`);
 });
 
@@ -135,12 +142,12 @@ test('the model choice is validated and the two models differ only below the cro
     assert.throws(()=>generate(params),RangeError);
   }
   assert.ok(validate(SUPER(DEFAULTS)).message.includes('Superellipse'));
-  const q=generate(DEFAULTS),s=generate(SUPER(DEFAULTS));
+  const q=generate(QUARTIC(DEFAULTS)),s=generate(SUPER(DEFAULTS));
   near(q.edgeY,s.edgeY);near(q.sideY,s.sideY);near(q.bottom,s.bottom);
   assert.deepEqual(q.corner,s.corner);
   for(let i=0;i<=100;i++){
     const x=q.joinX*i/100;
-    assert.deepEqual(surface(x,DEFAULTS),surface(x,SUPER(DEFAULTS)),'playing arc is shared');
+    assert.deepEqual(surface(x,QUARTIC(DEFAULTS)),surface(x,SUPER(DEFAULTS)),'playing arc is shared');
   }
   assert.notDeepEqual(q.underside,s.underside);
 });
@@ -149,7 +156,7 @@ test('exponent and flat side are dials, and a thinner wall limits the corner dro
   const base=SUPER(DEFAULTS);
   // Defaults are a drop-in swap: same wall as the quartic, same available drop.
   near(generate({...base,blend:0}).flatSideHeight,FLAT_SIDE_FRACTION*DEFAULTS.thickness);
-  near(generate({...DEFAULTS,blend:0}).flatSideHeight,FLAT_SIDE_FRACTION*DEFAULTS.thickness);
+  near(generate(QUARTIC({...DEFAULTS,blend:0})).flatSideHeight,FLAT_SIDE_FRACTION*DEFAULTS.thickness);
   // Both ends are pinned at -T and the wall, so the exponent only moves the
   // span between them: a squarer curve stays deep further out, removing more
   // wood, and then turns up harder into the wall.

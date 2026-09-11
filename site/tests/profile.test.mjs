@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { DEFAULTS, PRESETS, radiusForCornerDrop, surface, bezier, curveRadius, cornerPoint, validate, generate, exportSvg } from '../src/profile.js';
+import { DEFAULTS, PRESETS, FLAT_SIDE_FRACTION, radiusForCornerDrop, surface, bezier, curveRadius, cornerPoint, validate, generate, exportSvg } from '../src/profile.js';
 import { makeTemplate, exportTemplateSvg } from '../src/template.js';
 import { STENCIL_FONT } from '../src/stencil-font.js';
 const near=(a,b,t=1e-8)=>assert.ok(Math.abs(a-b)<t,`${a} != ${b}`);
@@ -76,7 +76,8 @@ test('Meares 1 lowered corners preserve the accepted underside and centre',()=>{
 });
 
 test('underside blends into the flat wall with zero curvature and into the quartic with G2 continuity',()=>{
-  for(const params of [DEFAULTS,...Object.values(PRESETS)]){
+  for(const base of [DEFAULTS,...Object.values(PRESETS)]){
+    const params={...base,model:'quartic'};
     const p=generate(params),curve=p.carveBlend,b=surface(p.underJoinX,params,true);
     assert.deepEqual(bezier(curve,0),[params.width/2,p.sideY]);
     near(bezier(curve,0,1)[0],0);near(1/curveRadius(curve,0),0);
@@ -132,14 +133,15 @@ test('SVG coordinates and physical units have a 1:1 scale',()=>{
 test('corner drop sets the actual vertical lowering while retaining the underside',()=>{
   for(const base of [DEFAULTS,...Object.values(PRESETS)]){
     const original=generate({...base,blend:0});
-    for(const drop of [0,.3,1,2,.1*base.thickness-.05]){
+    const wall=(base.sideFraction??FLAT_SIDE_FRACTION)*base.thickness;
+    for(const drop of [0,wall*.3,wall*.7,wall-.05]){
       const blend=radiusForCornerDrop(drop,base);
       const p=generate({...base,blend});
       near(p.edgeY-p.corner.sideTopY,drop);
       assert.deepEqual(p.underside,original.underside);
-      near(p.flatSideHeight,.1*base.thickness-drop);
+      near(p.flatSideHeight,wall-drop);
     }
   }
   for(const drop of [-1,NaN,Infinity,100])assert.ok(Number.isNaN(radiusForCornerDrop(drop,DEFAULTS)));
-  assert.equal(validate({...DEFAULTS,blend:radiusForCornerDrop(.1*DEFAULTS.thickness,DEFAULTS)}).valid,false);
+  assert.equal(validate({...DEFAULTS,blend:radiusForCornerDrop(FLAT_SIDE_FRACTION*DEFAULTS.thickness,DEFAULTS)}).valid,false);
 });

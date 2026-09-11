@@ -1,32 +1,42 @@
-/** Fixed playing arc and flat sides; underside carved up; top corners eased last.
+/** Fixed playing arc; one superellipse underside rising to the flat sides left
+ * on the blank; top corners eased last with a file.
  * All lengths are millimetres. Crown is (0, 0); underside centre is (0, -T).
  */
 export const DEFAULTS = Object.freeze({ width: 60, radius: 70, thickness: 26, blend: .5 });
+// Flat sides are sized to each drawing's corner drop plus a hair, since the
+// wall is only what the file needs, not a design proportion. See PRESETS notes
+// in analysis/README.md.
 export const PRESETS = Object.freeze({
-  meares1: { width: 60, radius: 70.25, thickness: 26.87, blend: 4 },
-  meares2: { width: 60, radius: 69.38, thickness: 25.55, blend: .5 },
+  meares1: { width: 60, radius: 70.25, thickness: 26.87, blend: 4, sideFraction: .1 },
+  meares2: { width: 60, radius: 69.38, thickness: 25.55, blend: .5, sideFraction: .0164 },
 });
-// The retained vertical wall, shared by both underside models. The corner
-// fillet is cut out of this wall, so it must survive the chosen corner drop.
+/** The vertical wall left on the blank. The board starts as a rectangular
+ * section: the underside is worked down to the template until it rises to meet
+ * the original flat face, and whatever flat is left is then softened with a
+ * file. So this is leftover stock sized to what the file needs, not a design
+ * proportion -- it only has to outlast the corner drop. 0.1 is a safe default
+ * for a fresh design; the traces prefer far less (meares2 wants 0.0164).
+ */
 export const FLAT_SIDE_FRACTION = .1;
-/** Underside model. 'quartic' is the shipped construction: a quartic in x over
- * the central span plus a G2 quintic Bezier carving up into the wall, needing
- * six chosen constants. The prototype 'superellipse' replaces both curves with
- * (x/a)^n + (y/b)^n = 1, which reaches the wall with a vertical tangent, so no
- * carving piece exists and only the exponent is chosen.
+/** Underside model. 'superellipse' is the default: one equation,
+ * (x/a)^n + (y/b)^n = 1, spanning the whole underside from the centre to the
+ * wall, which it reaches with a vertical tangent -- matching how the board is
+ * actually worked, and something no y = f(x) polynomial can do. Only the
+ * exponent is chosen; a, b and the wall height follow from W, R, T and the
+ * flat side left on the blank.
  *
- * These defaults are a drop-in swap: the same flat side as the quartic, so
- * corner drop behaves identically and every preset stays valid. 1.6 is the
- * joint least-squares fit to both traces AT that flat side. The traces
- * themselves prefer a thinner wall -- their joint optimum is n 1.74 with
- * sideFraction 0.019 -- but that leaves about 0.5 mm of wall for the fillet to
- * cut from. Pass exponent and sideFraction to explore; see
- * analysis/superellipse-fit.json. Both are tuning dials, not derived values.
+ * 'quartic' is the earlier construction, kept for comparison: a quartic in x
+ * over the central span plus a G2 quintic Bezier carving up into the wall,
+ * needing six chosen constants where this needs one.
+ *
+ * 1.69 is the joint least-squares fit to both Meares traces with each flat side
+ * sized to its corner drop (pooled 2.31 px against the quartic's 3.22 px); see
+ * analysis/superellipse-fit.json. It is a tuning dial, not a derived value.
  */
 export const UNDERSIDE_MODELS = Object.freeze(['quartic','superellipse']);
-export const SUPERELLIPSE_EXPONENT = 1.6;
+export const SUPERELLIPSE_EXPONENT = 1.69;
 export const SUPERELLIPSE_SIDE_FRACTION = FLAT_SIDE_FRACTION;
-const modelOf = params => params.model ?? 'quartic';
+const modelOf = params => params.model ?? 'superellipse';
 const exponentOf = params => params.exponent ?? SUPERELLIPSE_EXPONENT;
 const sideFractionOf = params => modelOf(params)==='superellipse'
   ? params.sideFraction ?? SUPERELLIPSE_SIDE_FRACTION : FLAT_SIDE_FRACTION;
@@ -97,8 +107,8 @@ export function construction(params) {
   const {width,radius,thickness,blend}=params;
   const a=width/2;
   const edgeY=surface(a,params).y;
-  // A short remnant of the original flat side. This chosen 10% proportion is
-  // independent of corner easing, and is documented as a construction preset.
+  // What is left of the blank's flat face once the underside is worked to the
+  // template. Independent of corner easing, which is filed from it afterwards.
   const sideY=edgeY-sideFractionOf(params)*thickness;
   // The superellipse already arrives at the wall vertically, so it needs no
   // carving piece and joins at the full half width instead of short of it.
