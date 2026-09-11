@@ -50,6 +50,50 @@ The Meares 1 preset now lowers the top corners with a 4 mm rounding radius (abou
 
 The generator is a symmetric design family inspired by these references, not a deformation of the traced splines. The trace files remain measured reference shapes. The four dimensions still do not uniquely specify every possible outline: the underside's quartic proportions and the blend construction are explicit modeling choices, documented with the generator.
 
+## A single-equation alternative: the superellipse
+
+The generator's underside is a quartic in `x` over the central 76% of the width, with a
+quintic Bezier carrying it up into the flat sides. A curve written as `y = f(x)` has finite
+slope everywhere, so no polynomial can meet a vertical side tangentially; the second piece
+exists for that reason. A **superellipse** `(x/a)^n + (y/b)^n = 1` does reach `x = a` with a
+vertical tangent for any `n > 1`, so it can describe the underside and its side roll-over in
+one equation.
+
+Fitting `n`, `b` and the maximum-width height to the traced undersides, with `a` pinned to the
+traced half width, gives `n` near **1.67** for both drawings, and fits them better than the
+current construction:
+
+| Nearest-point RMS, source pixels | meares1 | meares2 |
+| --- | ---: | ---: |
+| Superellipse, maximum-width height free | 1.69 | 1.90 |
+| Superellipse, height pinned to the traced side datum | 2.10 | 3.00 |
+| Generator quartic + Bezier + flat side | 3.37 | 3.08 |
+
+The gain is almost entirely at the sides. Over the central 60% the two are comparable (1.40 vs
+1.52 on meares1; 2.10 vs 2.36 on meares2); outside it the superellipse is roughly twice as
+close (2.03 vs 4.93; 1.55 vs 3.89). This is consistent with the circle-fit results above: the
+central region is not where the models disagree.
+
+![Superellipse fitted to the traced undersides](superellipse-comparison.png)
+
+Three caveats before treating `n = 1.67` as a result:
+
+1. The best fit puts the curve's maximum-width height **above** the traced widest point, by
+   1.26 mm (meares1) and 1.84 mm (meares2) at an assumed 60 mm width, so the trace stops short
+   of the vertical tangent. Pinning that height to the traced side datum is the honest
+   single-equation constraint and costs accuracy, dropping `n` to 1.57 and 1.52. On meares2 the
+   pinned fit is no better than the current construction.
+2. `n < 2` makes the second derivative unbounded at `x = 0`: curvature grows without limit at
+   the centreline instead of settling. It is small in physical terms — the radius is about
+   34 mm at 3 mm from the centre against the generator's 33 mm, tightening to roughly 20 mm at
+   0.6 mm and 9 mm at 0.06 mm — but the surface is not C2 there, unlike the present quartic.
+3. Both models are symmetric and both traces are not, so each pays the same asymmetry penalty.
+   These are in-sample fits to two drawings, not evidence of a construction rule.
+
+Reproduce with `.venv/bin/python scripts/fit_superellipse.py`; results are written to
+`superellipse-fit.json`. This is exploratory analysis. Nothing here feeds the generator, whose
+underside remains the quartic documented with the app.
+
 ## Method and accuracy
 
 1. Crop around each cross section, excluding the neighbouring longitudinal drawing. Interpret the left-hand outer surface in each original scan as the playing surface, consistent with its gentler curvature.
@@ -69,6 +113,7 @@ Ink thickness, doubled outlines, endpoint selection and possible scan distortion
 - `meares1-contour.csv`, `meares2-contour.csv`: 1,201 ordered points around each fitted closed outline, including the repeated endpoint.
 - `meares1-outline.svg`, `meares2-outline.svg`: sampled vector outlines. SVG coordinates use 1,000 units per source width; they are not millimetres. Smoothing may move the extrema slightly.
 - `meares1-spline.json`, `meares2-spline.json`: exact cubic spline knots and control coefficients, plus the source-coordinate transformation. Evaluate with SciPy `splev(t, (knots, np.array(coefficients).T, degree))`, for `0 <= t <= 1`.
+- `superellipse-comparison.png`, `superellipse-comparison.svg`, `superellipse-fit.json`: single-equation superellipse fits to the traced undersides, compared with the generator.
 - `measurements.json`: full numeric measurements and circle/spline fit diagnostics.
 - PNG and SVG comparison figures: source overlays, normalized comparison, and side enlargements.
 
