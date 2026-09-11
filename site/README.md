@@ -26,6 +26,12 @@ The repository's `.github/workflows/static.yml` runs the tests and build with No
 3. Optionally download the selected section as a full-size outline SVG.
 4. Enter the stencil name, review the paired template preview, and download template SVG or 3MF.
 
+**Settle the corner rounding before you download.** The underside follows it, so a template taken
+at one rounding does not match the section at another. Change the rounding after downloading and
+the app says so, naming both values, until you download again or set it back. Every exported
+template records the rounding and flat side it was made for, in the SVG description and in the
+3MF metadata, so a printed plate can always be checked against the section it belongs to.
+
 The diagram is independent of stencil-name validation: a long or unsupported name blocks templates but still allows section review and outline download. Invalid section dimensions clear the diagram and disable geometry downloads rather than showing stale geometry.
 
 ## Section dimensions

@@ -59,3 +59,16 @@ test('3MF declares millimetres and two named objects with separate build items',
   const archive=exportTemplatePair3mf(pair);assert.ok(archive instanceof Uint8Array);
   assert.equal(new DataView(archive.buffer).getUint32(0,true),0x04034b50);
 });
+
+test('the 3MF records the corner rounding its contact edge was built for',()=>{
+  const xml=pairModelXml(pair,1.5);
+  assert.match(xml,/<metadata name="Description">/);
+  assert.match(xml,/contact edge follows that rounding/);
+  // The values come from the plates themselves, so the file always agrees with
+  // the geometry it carries rather than with a number typed into the test.
+  for(const {fret,template} of pair.sections){
+    assert.ok(template.cornerDrop>0&&template.flatSide>template.cornerDrop);
+    assert.ok(xml.includes(`F${fret}: corner rounding drops the edge ${template.cornerDrop.toFixed(2)} mm, `
+      +`leaving a ${template.flatSide.toFixed(2)} mm flat side`),`fret ${fret} rounding is recorded`);
+  }
+});

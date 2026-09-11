@@ -89,3 +89,37 @@ test('F1 and F7 share screen scale and crown alignment',async()=>{
   const radius7=ui.get('metric-radius').textContent;
   await ui.get('tab-f1').click();assert.equal(ui.get('metric-radius').textContent,radius7);
 });
+
+test('changing the rounding after a download warns that the template no longer matches',async()=>{
+  const ui=app();await enterMeasurements(ui);
+  await ui.input('cornerDrop-number',1);
+  assert.equal(ui.get('stale-warning').hidden,true,'nothing downloaded yet, nothing to warn about');
+  await ui.get('export-pair').click();
+  assert.equal(ui.get('stale-warning').hidden,true,'the download matches what is on screen');
+  // The underside follows the rounding now, so the downloaded plates are stale.
+  await ui.input('cornerDrop-number',2);
+  assert.equal(ui.get('stale-warning').hidden,false);
+  const text=ui.get('stale-warning').textContent;
+  assert.match(text,/1\.00 mm/);assert.match(text,/2\.00 mm/);
+  assert.match(text,/Download again/);
+  // Returning to the rounding it was taken at clears the warning.
+  await ui.input('cornerDrop-number',1);
+  assert.equal(ui.get('stale-warning').hidden,true);
+  // A fresh download at the new rounding clears it too.
+  await ui.input('cornerDrop-number',3);
+  assert.equal(ui.get('stale-warning').hidden,false);
+  await ui.get('export-3mf').click();
+  assert.equal(ui.get('stale-warning').hidden,true);
+});
+
+test('exported templates record the rounding they were made for',async()=>{
+  const ui=app();await enterMeasurements(ui);
+  await ui.input('cornerDrop-number',1.25);
+  await ui.get('export-pair').click();
+  const svg=await ui.downloads.at(-1).blob.text();
+  assert.match(svg,/F1: corner rounding drops the edge 1\.25 mm/);
+  assert.match(svg,/leaves a 1\.35 mm flat side/,'the flat is the rounding plus the 0.1 mm allowance');
+  // F7 is thicker, so its rounding and flat scale with it, and both are recorded.
+  assert.match(svg,/F7: corner rounding drops the edge 1\.38 mm/);
+  assert.match(svg,/contact edge follows that rounding/);
+});

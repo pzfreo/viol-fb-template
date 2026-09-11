@@ -107,7 +107,7 @@ export function pairModelXml(pair,thickness=DEFAULT_PRINT_THICKNESS) {
     const triangles=mesh.triangles.map(([a,b,c])=>`<triangle v1="${a}" v2="${b}" v3="${c}"/>`).join('');
     return `<object id="${i+1}" type="model" name="${xmlAttribute(mesh.name)}"><mesh><vertices>${vertices}</vertices><triangles>${triangles}</triangles></mesh></object>`;
   });
-  return `<?xml version="1.0" encoding="UTF-8"?>\n<model unit="millimeter" xml:lang="en-US" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02"><metadata name="Application">Fingerboard Studio</metadata><resources>${objects.join('')}</resources><build>${pair.sections.map((_,i)=>`<item objectid="${i+1}"/>`).join('')}</build></model>`;
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<model unit="millimeter" xml:lang="en-US" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02"><metadata name="Application">Fingerboard Studio</metadata><metadata name="Description">${pair.sections.map(({fret,template})=>`F${fret}: corner rounding drops the edge ${template.cornerDrop.toFixed(2)} mm, leaving a ${template.flatSide.toFixed(2)} mm flat side`).join('; ')}. The contact edge follows that rounding, so these plates match only those amounts.</metadata><resources>${objects.join('')}</resources><build>${pair.sections.map((_,i)=>`<item objectid="${i+1}"/>`).join('')}</build></model>`;
 }
 
 // A minimal ZIP writer using stored entries. No runtime dependency or network
