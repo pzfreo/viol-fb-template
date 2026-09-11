@@ -22,7 +22,7 @@ The repository's `.github/workflows/static.yml` runs the tests and build with No
 ## Review workflow
 
 1. Enter or import the taper and string measurements, then enter maximum thickness at frets 1 and 7.
-2. Review the actual sections using the F1/F7 tabs. Adjust corner rounding; the same percentage of each section's flat side applies to both. Arrow keys, Home and End switch tabs from the keyboard.
+2. Review the actual sections using the F1/F7 tabs. Adjust corner rounding on the selected section; both sections round in proportion to their thickness. Arrow keys, Home and End switch tabs from the keyboard.
 3. Optionally download the selected section as a full-size outline SVG.
 4. Enter the stencil name, review the paired template preview, and download template SVG or 3MF.
 
@@ -66,7 +66,7 @@ The [latest comparison](../analysis/latest-meares-overlay.png) uses a 4 mm corne
 
 Enter nut width, end width, fingerboard length from the nut, vibrating string length, and maximum thickness at frets 1 and 7. The client uses Overstand's `calculateFretPositions` formula, read from the local `src-ts/geometry_engine.ts`: `x = L (1 - 2^(-n/12))`. With straight sides, `W(x) = W_nut + (W_end - W_nut) x / L_fb`. Frets beyond the board are rejected, not clamped or extrapolated.
 
-Both sections use one shared design; there is no drawing-to-fret assignment. Each uses its calculated width and independently entered thickness. Both sections use one fixed playing radius, taken from the explicit radius input or the shared profile when that input is blank. Thus `R_F1 = R_F7`, and because D is a share of each section's own flat side, the same percentage applies at both frets; in millimetres that still works out as `D_section = D_shared T_section / T_shared`. Both review tabs use the same screen scale and crown alignment; the wider section shows more of the same playing circle. Thickness is never inferred from width. You can adjust the shared profile in the workshop below the paired-template form.
+Both sections use one shared design; there is no drawing-to-fret assignment. Each uses its calculated width and independently entered thickness. Both sections use one fixed playing radius, taken from the explicit radius input or the shared profile when that input is blank. Thus `R_F1 = R_F7` and `D_section = D_shared T_section / T_shared`. The 0.1 mm shaping allowance is not scaled with them, so the two sections are alike to within that allowance rather than exactly similar. Both review tabs use the same screen scale and crown alignment; the wider section shows more of the same playing circle. Thickness is never inferred from width. You can adjust the shared profile in the workshop below the paired-template form.
 
 **Import Overstand parameters** reads the `.json` parameter export entirely in the browser. It maps `fingerboard_width_at_nut`, `fingerboard_width_at_end`, `fingerboard_length`, `vsl`, `instrument_name` and optional `fingerboard_radius`. The last value sets the explicit playing radius for both sections. Import clears both maximum-thickness fields for the user to enter; visible-edge heights, Overstand blend percentage and derived board thicknesses are not substituted for them. Invalid files leave existing form values intact. The imported name stays editable, including when it must be shortened to fit the smaller stencil with its F1/F7 suffix.
 

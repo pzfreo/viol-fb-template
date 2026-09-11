@@ -88,6 +88,15 @@ export function radiusForCornerDrop(drop, params) {
   return drop*(2*root-drop)/(2*(r-a));
 }
 
+/** Height and derivatives of one surface at x.
+ *
+ * Callers beware on the superellipse underside: `first` and `second` are
+ * genuinely infinite at the extremes, and returning Infinity is the honest
+ * answer rather than a failure. At x = +/-a the tangent is vertical, so the
+ * slope diverges; at x = 0, and again at the sides, curvature diverges whenever
+ * the exponent is below 2. `y` is finite everywhere. Sample the curve with
+ * superellipsePoint if you need well-behaved values near the sides.
+ */
 export function surface(x, params, underside = false) {
   const a = params.width / 2;
   if (!underside) {
@@ -238,5 +247,5 @@ export function exportSvg(profile) {
   const {width,thickness,radius,blend}=profile.params;
   const margin=5;
   const path=profile.points.map(([x,y],i)=>`${i?'L':'M'}${x.toFixed(6)} ${(-y).toFixed(6)}`).join(' ')+' Z';
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width+2*margin}mm" height="${thickness+2*margin}mm" viewBox="${-width/2-margin} ${-margin} ${width+2*margin} ${thickness+2*margin}">\n<title>Viol fingerboard: W ${width}, R ${radius}, T ${thickness}, B ${blend} mm</title>\n<desc>1:1 outline in millimetres. Fixed circular playing surface and flat side walls; a single superellipse underside rising to meet them. B is only the small top-corner rounding radius; zero leaves a sharp corner. Print at 100 percent.</desc>\n<path d="${path}" fill="none" stroke="black" stroke-width="0.15"/>\n</svg>\n`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width+2*margin}mm" height="${thickness+2*margin}mm" viewBox="${-width/2-margin} ${-margin} ${width+2*margin} ${thickness+2*margin}">\n<title>Viol fingerboard: W ${width}, R ${radius}, T ${thickness}, B ${blend} mm</title>\n<desc>1:1 outline in millimetres. Fixed circular playing surface; a single superellipse underside rising to meet the flat sides left on the blank. B is the top-corner rounding radius; zero leaves a sharp corner. Shaping stops 0.1 mm below where the rounding reaches, so B sets the flat side too. Print at 100 percent.</desc>\n<path d="${path}" fill="none" stroke="black" stroke-width="0.15"/>\n</svg>\n`;
 }

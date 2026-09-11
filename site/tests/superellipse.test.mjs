@@ -7,7 +7,6 @@ const near=(a,b,t=1e-8)=>assert.ok(Math.abs(a-b)<t,`${a} != ${b}`);
 const curvature=s=>Math.abs(s.second)/(1+s.first*s.first)**1.5;
 const SUPER=params=>({...params,model:'superellipse'});
 const QUARTIC=params=>({...params,model:'quartic'});
-const wallOf=params=>flatSide(params);
 const CASES=[DEFAULTS,...Object.values(PRESETS)].map(SUPER);
 
 test('the superellipse is the default and the quartic remains available intact',()=>{
@@ -145,6 +144,27 @@ test('curvature is unbounded at the centre and at the wall, unlike the quartic',
   // The quartic, for contrast, stays finite and near constant across the span.
   const quartic=[.006,3,9].map(x=>1/curvature(surface(x,QUARTIC(DEFAULTS),true)));
   for(const radius of quartic)assert.ok(radius>20&&radius<60,`${radius} stays moderate`);
+});
+
+test('derivatives at the extremes are infinite by contract, and y stays finite',()=>{
+  // Pinned deliberately: a vertical tangent has no finite slope, and curvature
+  // diverges at both ends for n < 2. Callers are warned in the doc comment, so
+  // these values are part of the contract rather than an accident.
+  for(const params of CASES){
+    const a=params.width/2,p=generate(params);
+    const wall=surface(a,params,true),centre=surface(0,params,true);
+    assert.equal(wall.first,Infinity,'vertical tangent at the flat side');
+    assert.equal(wall.second,Infinity);
+    near(wall.y,p.sideY);
+    assert.equal(centre.first,0,'flat at the centreline');
+    assert.equal(centre.second,Infinity);
+    near(centre.y,-params.thickness);
+    // Nothing in the generated outline inherits those infinities.
+    for(const [x,y] of p.points)assert.ok(Number.isFinite(x)&&Number.isFinite(y));
+  }
+  // The quartic stays finite throughout, which is what it trades its pieces for.
+  for(const key of ['y','first','second'])
+    for(const x of [0,15,30])assert.ok(Number.isFinite(surface(x,QUARTIC(DEFAULTS),true)[key]));
 });
 
 test('the model choice is validated and the two models differ only below the crown',()=>{
