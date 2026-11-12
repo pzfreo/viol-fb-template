@@ -174,7 +174,7 @@ Method differences from the Meares tracing: the largest connected ink component 
 
 ## The underside models side by side
 
-[`underside-models/`](underside-models/) has one diagram per underside model: its formula, a drawing at 60 mm width showing what each symbol means, and the curve laid over the traces it was fitted to. [`all-undersides.png`](underside-models/all-undersides.png) stacks all five.
+[`underside-models/`](underside-models/) has one diagram per underside model: its formula, a drawing at 60 mm width showing what each symbol means, and the curve laid over the traces it was fitted to. [`all-undersides.png`](underside-models/all-undersides.png) stacks all five, and [`underside-models.pdf`](underside-models/underside-models.pdf) has them as vector pages, one per model.
 
 1. [Quartic + Bézier + flat side](underside-models/1-quartic-bezier.png): the earlier Meares generator.
 2. [Superellipse + flat side](underside-models/2-superellipse-flat.png): the current Meares generator.

@@ -354,9 +354,12 @@ def main():
                ('3-superellipse-to-corner', model_corner(3)),
                ('4-superellipse-cut-short', model_clipped(4)),
                ('5-circular-arc', model_arc(5))]
-    for name, fig in figures:
-        fig.savefig(OUT / f'{name}.png', dpi=130)
-        plt.close(fig)
+    from matplotlib.backends.backend_pdf import PdfPages
+    with PdfPages(OUT / 'underside-models.pdf', metadata={'Title': 'Fingerboard underside models'}) as pdf:
+        for name, fig in figures:
+            fig.savefig(OUT / f'{name}.png', dpi=130)
+            pdf.savefig(fig)
+            plt.close(fig)
     from PIL import Image
     pages = [Image.open(OUT / f'{n}.png').convert('RGB') for n, _ in figures]
     sheet = Image.new('RGB', (pages[0].width, sum(p.height for p in pages)), 'white')
