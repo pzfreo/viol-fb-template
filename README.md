@@ -7,6 +7,8 @@ Viol fingerboard cross-section references:
 
 - [meares1](meares1.png)
 - [meares2](meares2.png)
+- [colichon-treble](colichon-treble.jpg), sections A-A' and B-B of a treble viol
+- [colichon-bass](colichon-bass.jpg), two dimensioned sections of a bass viol
 
 [Tracing and curve analysis](analysis/README.md) includes normalized outlines,
 side-blend comparisons, spline data and a reproducible analysis script.

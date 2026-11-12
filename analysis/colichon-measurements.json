@@ -1,0 +1,294 @@
+{
+  "colichon-treble-a": {
+    "instrument": "treble",
+    "section": "A-A'",
+    "source_width_px": 668.1077757368192,
+    "source_tilt_degrees": -1.0291548043059813,
+    "top_rise_over_width": 0.12971808014911465,
+    "underside_depth_over_width": 0.2934574163022439,
+    "maximum_thickness_over_width": 0.42215568862275454,
+    "playing_surface_circle": {
+      "rise_over_width": 0.13266224700634996,
+      "radius_over_width": 1.008573568665564,
+      "rms_px": 4.953468122575123
+    },
+    "underside_fits": {
+      "circular_arc": {
+        "rms_px": 2.748628209706346,
+        "rms_px_central_60": 2.7964613333128074,
+        "rms_px_outer": 2.6754603907554078,
+        "max_px": 6.097922124295322,
+        "depth_over_width": 0.29726347825848176,
+        "corner_angle_from_chord_degrees": 60.46924406840469,
+        "radius_over_width": 0.5691341062497484
+      },
+      "clipped_superellipse": {
+        "rms_px": 1.8924986982729868,
+        "rms_px_central_60": 1.9180612952274831,
+        "rms_px_outer": 1.8535919375668206,
+        "max_px": 6.40967703299923,
+        "depth_over_width": 0.292341005128377,
+        "corner_angle_from_chord_degrees": 62.075956210445845,
+        "half_width_a_over_width": 0.5732176477363778,
+        "semi_depth_b_over_width": 0.627290350724717,
+        "exponent_n": 2.168670565009362
+      },
+      "full_width_superellipse": {
+        "rms_px": 4.0038972058159175,
+        "rms_px_central_60": 3.775840775456724,
+        "rms_px_outer": 4.322719227902779,
+        "max_px": 8.173434600469616,
+        "depth_over_width": 0.30003984479857754,
+        "corner_angle_from_chord_degrees": 76.97727202805343,
+        "half_width_a_over_width": 0.5,
+        "exponent_n": 1.6295225436736869
+      },
+      "full_width_superellipse_n_1.69": {
+        "rms_px": 4.337314480008845,
+        "rms_px_central_60": 3.031301891730494,
+        "rms_px_outer": 5.7629547026257635,
+        "max_px": 10.22153652290665,
+        "depth_over_width": 0.2963950979318498,
+        "corner_angle_from_chord_degrees": 78.10900281306078,
+        "half_width_a_over_width": 0.5,
+        "exponent_n": 1.69
+      },
+      "full_width_superellipse_n_2": {
+        "rms_px": 9.550267772569217,
+        "rms_px_central_60": 5.352781245425054,
+        "rms_px_outer": 13.594381937100094,
+        "max_px": 20.168642024762924,
+        "depth_over_width": 0.2821541066677796,
+        "corner_angle_from_chord_degrees": 81.84231651672957,
+        "half_width_a_over_width": 0.5,
+        "exponent_n": 2.0
+      }
+    }
+  },
+  "colichon-treble-b": {
+    "instrument": "treble",
+    "section": "B-B",
+    "source_width_px": 730.3314316117032,
+    "source_tilt_degrees": -1.7261996488176585,
+    "top_rise_over_width": 0.13309548092931173,
+    "underside_depth_over_width": 0.35996392842679953,
+    "maximum_thickness_over_width": 0.4906914893617022,
+    "playing_surface_circle": {
+      "rise_over_width": 0.13536259564242792,
+      "radius_over_width": 0.9911269469442434,
+      "rms_px": 5.003235231199673
+    },
+    "underside_fits": {
+      "circular_arc": {
+        "rms_px": 5.640661949276818,
+        "rms_px_central_60": 5.298264774391933,
+        "rms_px_outer": 6.12907742425885,
+        "max_px": 11.541165302256331,
+        "depth_over_width": 0.35004077571356684,
+        "corner_angle_from_chord_degrees": 68.55413670320746,
+        "radius_over_width": 0.5321216343346367
+      },
+      "clipped_superellipse": {
+        "rms_px": 4.507312897993541,
+        "rms_px_central_60": 3.8408754429858,
+        "rms_px_outer": 5.37166555885352,
+        "max_px": 8.301788087006253,
+        "depth_over_width": 0.35986370347658636,
+        "corner_angle_from_chord_degrees": 74.6396419444956,
+        "half_width_a_over_width": 0.5026889740167665,
+        "semi_depth_b_over_width": 0.38125124843961716,
+        "exponent_n": 1.643886811921767
+      },
+      "full_width_superellipse": {
+        "rms_px": 4.591380238503226,
+        "rms_px_central_60": 3.9762166682239832,
+        "rms_px_outer": 5.4009154319300885,
+        "max_px": 8.689832059722121,
+        "depth_over_width": 0.3615622086593008,
+        "corner_angle_from_chord_degrees": 78.13233624330931,
+        "half_width_a_over_width": 0.5,
+        "exponent_n": 1.581480147976014
+      },
+      "full_width_superellipse_n_1.69": {
+        "rms_px": 5.958100115585641,
+        "rms_px_central_60": 4.642730207302959,
+        "rms_px_outer": 7.5432226555068835,
+        "max_px": 12.87046358003188,
+        "depth_over_width": 0.35396007036939425,
+        "corner_angle_from_chord_degrees": 80.00017355511307,
+        "half_width_a_over_width": 0.5,
+        "exponent_n": 1.69
+      },
+      "full_width_superellipse_n_2": {
+        "rms_px": 13.268243624739636,
+        "rms_px_central_60": 10.12596470520168,
+        "rms_px_outer": 16.996207221953487,
+        "max_px": 25.61101802930215,
+        "depth_over_width": 0.3381509766361171,
+        "corner_angle_from_chord_degrees": 83.17923964181756,
+        "half_width_a_over_width": 0.5,
+        "exponent_n": 2.0
+      }
+    }
+  },
+  "colichon-bass-1": {
+    "instrument": "bass",
+    "section": "61.5 wide",
+    "source_width_px": 369.02167957994016,
+    "source_tilt_degrees": -0.6210681347941919,
+    "top_rise_over_width": 0.08949382054238234,
+    "underside_depth_over_width": 0.2622689587815857,
+    "maximum_thickness_over_width": 0.3479708744038837,
+    "playing_surface_circle": {
+      "rise_over_width": 0.08949526235342439,
+      "radius_over_width": 1.4414696107868101,
+      "rms_px": 0.7426360254012506
+    },
+    "underside_fits": {
+      "circular_arc": {
+        "rms_px": 7.347725730258764,
+        "rms_px_central_60": 5.610416223645514,
+        "rms_px_outer": 9.458777048725498,
+        "max_px": 14.678449595111928,
+        "depth_over_width": 0.2807927735999357,
+        "corner_angle_from_chord_degrees": 57.74190448610148,
+        "radius_over_width": 0.5855645238897436
+      },
+      "clipped_superellipse": {
+        "rms_px": 3.4746710395032068,
+        "rms_px_central_60": 2.9442230051817395,
+        "rms_px_outer": 4.176056159214245,
+        "max_px": 5.690730689009306,
+        "depth_over_width": 0.2558006409458624,
+        "corner_angle_from_chord_degrees": 72.53038113248445,
+        "half_width_a_over_width": 0.5182004845427963,
+        "semi_depth_b_over_width": 0.4338702839338413,
+        "exponent_n": 2.684873601368279
+      },
+      "full_width_superellipse": {
+        "rms_px": 3.772649362915802,
+        "rms_px_central_60": 2.992293675315919,
+        "rms_px_outer": 4.748966684949288,
+        "max_px": 7.031306432544462,
+        "depth_over_width": 0.26114283782994463,
+        "corner_angle_from_chord_degrees": 81.65376493428526,
+        "half_width_a_over_width": 0.5,
+        "exponent_n": 2.0479500142391927
+      },
+      "full_width_superellipse_n_1.69": {
+        "rms_px": 5.530652557742977,
+        "rms_px_central_60": 4.675618390137729,
+        "rms_px_outer": 6.658934845760695,
+        "max_px": 11.23554169428392,
+        "depth_over_width": 0.2778492703214483,
+        "corner_angle_from_chord_degrees": 77.34012516687004,
+        "half_width_a_over_width": 0.5,
+        "exponent_n": 1.69
+      },
+      "full_width_superellipse_n_2": {
+        "rms_px": 3.8009120335811195,
+        "rms_px_central_60": 3.0762257531804638,
+        "rms_px_outer": 4.722430487931787,
+        "max_px": 6.828588847049247,
+        "depth_over_width": 0.26290794106277665,
+        "corner_angle_from_chord_degrees": 81.25405931499621,
+        "half_width_a_over_width": 0.5,
+        "exponent_n": 2.0
+      }
+    },
+    "millimetres": {
+      "stated_width": 61.5,
+      "stated_thickness": 21.0,
+      "stated_edge_heights": [
+        3.5,
+        3.5
+      ],
+      "traced_thickness": 21.40020877583885,
+      "top_rise": 5.503869963356514,
+      "underside_depth": 16.12954096506752,
+      "playing_surface_radius": 88.65038106338882,
+      "underside_arc_radius": 36.01221821921923,
+      "px_per_mm": 6.000352513494962
+    }
+  },
+  "colichon-bass-2": {
+    "instrument": "bass",
+    "section": "74.5 wide",
+    "source_width_px": 437.0045766350737,
+    "source_tilt_degrees": -0.26222141639654395,
+    "top_rise_over_width": 0.12379236855471715,
+    "underside_depth_over_width": 0.2817361616563598,
+    "maximum_thickness_over_width": 0.4050343249427918,
+    "playing_surface_circle": {
+      "rise_over_width": 0.12575319670523577,
+      "radius_over_width": 1.056887114785045,
+      "rms_px": 1.6275548033177287
+    },
+    "underside_fits": {
+      "circular_arc": {
+        "rms_px": 5.4495981329701895,
+        "rms_px_central_60": 3.946805350127137,
+        "rms_px_outer": 7.114625334235543,
+        "max_px": 9.183149257297181,
+        "depth_over_width": 0.29594200231839163,
+        "corner_angle_from_chord_degrees": 60.25388757197437,
+        "radius_over_width": 0.5703510461007845
+      },
+      "clipped_superellipse": {
+        "rms_px": 0.7802874761756203,
+        "rms_px_central_60": 0.7620314104580111,
+        "rms_px_outer": 0.8065743226745091,
+        "max_px": 2.0175900356184573,
+        "depth_over_width": 0.28130762840033097,
+        "corner_angle_from_chord_degrees": 74.95794629723288,
+        "half_width_a_over_width": 0.5057345524623971,
+        "semi_depth_b_over_width": 0.3371420148585612,
+        "exponent_n": 2.0858069511027844
+      },
+      "full_width_superellipse": {
+        "rms_px": 1.2419075639444705,
+        "rms_px_central_60": 1.1634337123230416,
+        "rms_px_outer": 1.349804985994696,
+        "max_px": 3.510203363469103,
+        "depth_over_width": 0.2846053892967742,
+        "corner_angle_from_chord_degrees": 80.3992400436324,
+        "half_width_a_over_width": 0.5,
+        "exponent_n": 1.861434729940386
+      },
+      "full_width_superellipse_n_1.69": {
+        "rms_px": 2.9396293359179566,
+        "rms_px_central_60": 2.9472114145510204,
+        "rms_px_outer": 2.928360541839699,
+        "max_px": 6.109603073076754,
+        "depth_over_width": 0.29409718729809686,
+        "corner_angle_from_chord_degrees": 78.01876818946091,
+        "half_width_a_over_width": 0.5,
+        "exponent_n": 1.69
+      },
+      "full_width_superellipse_n_2": {
+        "rms_px": 2.219339158056981,
+        "rms_px_central_60": 1.173276324433227,
+        "rms_px_outer": 3.191093790533375,
+        "max_px": 5.007180786867105,
+        "depth_over_width": 0.27853463220014624,
+        "corner_angle_from_chord_degrees": 81.73776414578649,
+        "half_width_a_over_width": 0.5,
+        "exponent_n": 2.0
+      }
+    },
+    "millimetres": {
+      "stated_width": 74.5,
+      "stated_thickness": 29.6,
+      "stated_edge_heights": [
+        6.0,
+        6.5
+      ],
+      "traced_thickness": 30.175057208237988,
+      "top_rise": 9.222531457326427,
+      "underside_depth": 20.989344043398805,
+      "playing_surface_radius": 78.73809005148584,
+      "underside_arc_radius": 42.49115293450844,
+      "px_per_mm": 5.8658332434238085
+    }
+  }
+}

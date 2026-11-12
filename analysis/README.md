@@ -131,6 +131,47 @@ flat side is pinned, and the two drawings only agree closely once each is given 
 Reproduce with `.venv/bin/python scripts/fit_superellipse.py`; results are written to
 `superellipse-fit.json`.
 
+## Colichon: a sharp-cornered section
+
+Two further sheets record sections from instruments by Colichon: a **treble** ([colichon-treble.jpg](../colichon-treble.jpg), sections A-A' and B-B, undimensioned) and a **bass** ([colichon-bass.jpg](../colichon-bass.jpg), two dimensioned sketches). Each sheet shows two sections of one fingerboard.
+
+![Colichon traces and underside candidates](colichon-comparison.png)
+
+These differ from the Meares drawings in one decisive way: **there is no vertical side and no roll-over**. The widest point is the top corner itself. The playing surface ends there in a sharp arris, and the underside leaves it immediately, heading inward at 60-80 degrees to the chord. On the bass the 3.5 and 6 / 6.5 mm figures are the height of that corner above the glue line; the outline runs straight through the glue line without a step.
+
+| | treble A-A' | treble B-B | bass, 61.5 wide | bass, 74.5 wide |
+| --- | ---: | ---: | ---: | ---: |
+| Maximum thickness / W | 0.422 | 0.491 | 0.348 | 0.405 |
+| Playing-surface rise / W | 0.130 | 0.133 | 0.089 | 0.124 |
+| Underside depth / W | 0.293 | 0.360 | 0.262 | 0.282 |
+| Playing radius / W, circle through the corners | 1.01 | 0.99 | 1.44 | 1.06 |
+| Stated thickness, mm | | | 21 | 29.6 |
+| Traced thickness, mm | | | 21.4 | 30.2 |
+| Playing radius, mm | | | 89 | 79 |
+
+The bass sketch is freehand but to scale: both sections come out at 5.9-6.0 px/mm from their stated widths, and the traced thicknesses land within 2% of the written ones. One pixel is about 0.17 mm.
+
+Nearest-point RMS of each underside candidate, in source pixels:
+
+| Underside candidate | treble A-A' | treble B-B | bass 61.5 | bass 74.5 |
+| --- | ---: | ---: | ---: | ---: |
+| Circular arc through the corners | 2.75 | 5.64 | 7.35 | 5.45 |
+| Superellipse, half width `a` and `n` free | 1.89 | 4.51 | 3.47 | 0.78 |
+| Superellipse reaching full width at the corner, `n` free | 4.00 | 4.59 | 3.77 | 1.24 |
+| ... fitted `n` | 1.63 | 1.58 | 2.05 | 1.86 |
+| ... with the Meares `n` = 1.69 | 4.34 | 5.96 | 5.53 | 2.94 |
+| ... with `n` = 2, a half ellipse | 9.55 | 13.27 | 3.80 | 2.22 |
+
+What this supports, and what it does not:
+
+1. **A plain circular arc is not the answer for the bass.** It is too shallow at the edges by about a millimetre RMS on both sketches. It is a fair description of treble A-A' only.
+2. **A superellipse whose own widest point sits on the top corner is the Meares model with nothing filed off and no flat left** (`D = 0`, `F = 0`). With the Meares exponent unchanged it lands within 0.5 mm RMS on the wider bass section and 0.9 mm on the narrower; the treble errors are 0.6-0.8% of width. So the existing generator already produces something recognisably Colichon at zero corner rounding, apart from its fixed 0.1 mm flat.
+3. **No single exponent serves both instruments.** The bass prefers `n` near 2, the treble near 1.6, and `n` = 2 is clearly wrong for the treble. Four sections from two drawings, one of them freehand, cannot settle whether that is a real treble/bass difference.
+4. **The playing radius is not constant along the bass board**: about 89 mm at the 61.5 mm section and 79 mm at the 74.5 mm section, a 3.7 mm difference in rise. The Studio currently holds one radius for both fret sections.
+5. Treble A-A' and the narrower bass sketch are visibly asymmetric; every candidate here is symmetric and pays for that.
+
+Method differences from the Meares tracing: the largest connected ink component is traced after blanking labels and arrow shafts; arrowheads and ticks touching the outline are interpolated and flagged; and on the bass sheet, where marks sit on both corners, the corners are placed by eye to about one pixel. Hatching and the glue line are interior and do not affect the outer envelope. Reproduce with `.venv/bin/python scripts/analyse_colichon.py`.
+
 ## Method and accuracy
 
 1. Crop around each cross section, excluding the neighbouring longitudinal drawing. Interpret the left-hand outer surface in each original scan as the playing surface, consistent with its gentler curvature.
@@ -151,6 +192,7 @@ Ink thickness, doubled outlines, endpoint selection and possible scan distortion
 - `meares1-outline.svg`, `meares2-outline.svg`: sampled vector outlines. SVG coordinates use 1,000 units per source width; they are not millimetres. Smoothing may move the extrema slightly.
 - `meares1-spline.json`, `meares2-spline.json`: exact cubic spline knots and control coefficients, plus the source-coordinate transformation. Evaluate with SciPy `splev(t, (knots, np.array(coefficients).T, degree))`, for `0 <= t <= 1`.
 - `superellipse-comparison.png`, `superellipse-comparison.svg`, `superellipse-fit.json`: single-equation superellipse fits to the traced undersides, compared with the generator.
+- `colichon-*-trace.csv`, `colichon-measurements.json`, `colichon-comparison.png` / `.svg`: Colichon traces (one row per sample, both surfaces, with interpolation flags), measurements and fits.
 - `measurements.json`: full numeric measurements and circle/spline fit diagnostics.
 - PNG and SVG comparison figures: source overlays, normalized comparison, and side enlargements.
 
