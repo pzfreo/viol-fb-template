@@ -172,6 +172,18 @@ What this supports, and what it does not:
 
 Method differences from the Meares tracing: the largest connected ink component is traced after blanking labels and arrow shafts; arrowheads and ticks touching the outline are interpolated and flagged; and on the bass sheet, where marks sit on both corners, the corners are placed by eye to about one pixel. Hatching and the glue line are interior and do not affect the outer envelope. Reproduce with `.venv/bin/python scripts/analyse_colichon.py`.
 
+## The underside models side by side
+
+[`underside-models/`](underside-models/) has one diagram per underside model: its formula, a drawing at 60 mm width showing what each symbol means, and the curve laid over the traces it was fitted to. [`all-undersides.png`](underside-models/all-undersides.png) stacks all five.
+
+1. [Quartic + Bézier + flat side](underside-models/1-quartic-bezier.png): the earlier Meares generator.
+2. [Superellipse + flat side](underside-models/2-superellipse-flat.png): the current Meares generator.
+3. [Superellipse to the corner](underside-models/3-superellipse-to-corner.png): Colichon; model 2 with the flat removed.
+4. [Superellipse cut short](underside-models/4-superellipse-cut-short.png): Colichon treble A-A' only.
+5. [Circular arc](underside-models/5-circular-arc.png): the simplest candidate.
+
+Redraw with `.venv/bin/python scripts/draw_underside_models.py`; it reads the fitted values from the JSON files and the Meares models from the generator.
+
 ## Method and accuracy
 
 1. Crop around each cross section, excluding the neighbouring longitudinal drawing. Interpret the left-hand outer surface in each original scan as the playing surface, consistent with its gentler curvature.
